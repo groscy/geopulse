@@ -1,0 +1,137 @@
+/*
+ * GeoPulse global styles — capabilities: design-tokens (type), app-shell (reset),
+ * motion-and-accessibility (keyframes + reduceMotion).
+ */
+
+/* self-hosted fonts (local-first NFR-1; no CDN) */
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--txt);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* app-shell: no page-level scroll; the shell owns its own overflow */
+  overflow: hidden;
+}
+
+/* All numeric / metric / timestamp / code values use mono numerals (design-tokens) */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Section labels: 10px uppercase, .11em, tertiary (design-tokens) */
+.section-label {
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--txt3);
+  font-weight: 600;
+}
+
+/* Stale is a state, never a solid health color (design-tokens / staleness).
+   45deg diagonal hatch; see also theme/patterns.ts for the canvas equivalent. */
+.stale-hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #5b646f 0 2px,
+    transparent 2px 4px
+  );
+}
+
+/* ---- motion (motion-and-accessibility) ---- */
+@keyframes gp-slide {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gp-modal {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes gp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.gp-slide {
+  animation: gp-slide var(--t-slide) ease both;
+}
+.gp-modal-enter {
+  animation: gp-modal var(--t-modal) both;
+}
+.gp-pulse {
+  animation: gp-pulse 2.4s ease-in-out infinite;
+}
+
+/*
+ * reduceMotion: when the root carries [data-reduce-motion="true"], disable
+ * idle rotation / flow particles / pulsing while keeping everything legible.
+ * (Globe rotation + particles are driven imperatively and also read the flag.)
+ */
+:root[data-reduce-motion="true"] .gp-slide,
+:root[data-reduce-motion="true"] .gp-modal-enter,
+:root[data-reduce-motion="true"] .gp-pulse {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-slide,
+  .gp-modal-enter,
+  .gp-pulse {
+    animation: none !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

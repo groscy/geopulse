@@ -1,0 +1,76 @@
+/*
+ * GeoPulse design tokens — capability: design-tokens
+ * Source of truth: design_handoff_geopulse/README.md (Design tokens).
+ * Every surface references these variables, never raw literals.
+ *
+ * Accent tweakability (motion-and-accessibility): --accent drives --em, the
+ * operational state color, and the warm end of the relation tone scale together.
+ * Degraded / Disrupted / Stale are FIXED so health contrast survives any accent.
+ */
+:root {
+  /* accent (tweakable) — see setAccent() in state/accent.ts */
+  --accent: #3f9d6b;
+
+  /* surface palette (graphite) */
+  --bg: #0e1116;
+  --panel: #141a21;
+  --panel2: #10161c;
+  --card: #161d25;
+  --line: #242c36;
+  --line2: #1a212a;
+  --txt: #c8d1db;
+  --txt2: #8a949f;
+  --txt3: #5b646f;
+  --em: var(--accent); /* emerald accent / interactive / "warm" */
+
+  /* land + ocean */
+  --land-neutral: #1c242e;
+  --land-dimmed: #151d26;
+  --ocean-inner: #131c26;
+  --ocean-outer: #0a0f15;
+
+  /* health-state semantics (used everywhere) */
+  --state-operational: var(--accent); /* == --em */
+  --state-degraded: #d3a03f;
+  --state-disrupted: #cc5b52;
+  --state-stale: #6b7480;
+
+  /* relation tone scale: hostile -> tense -> warm */
+  --tone-hostile: #cc5b52;
+  --tone-tense: #d3a03f;
+  --tone-warm: var(--accent);
+
+  /* industry / traffic accents */
+  --accent-cyan: #4aa8c9; /* industry nodes, players */
+  --chain-raw: #c9974a;
+  --chain-finished: #3f9d6b;
+  --sat-dot: #eaf4fb;
+
+  /* typography */
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", "Menlo", monospace;
+  --fs-base: 13px;
+  --fs-label: 10px;      /* section labels: uppercase, .11em, --txt3 */
+  --ls-label: 0.11em;
+  --fs-product: 14px;    /* top-bar product name / slide titles */
+
+  /* spacing / radius */
+  --rail-w: 72px;
+  --rail-btn-h: 46px;
+  --topbar-h: 46px;
+  --panel-w: 380px;
+  --pad-panel: 14px;
+  --r-card: 9px;
+  --r-chip: 7px;
+  --r-modal: 14px;
+
+  /* shadow / elevation */
+  --sh-card: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --sh-modal: 0 30px 80px rgba(0, 0, 0, 0.6);
+  --sh-popup: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --legend-blur: blur(6px);
+
+  /* motion timings (see styles/global.css keyframes) */
+  --t-slide: 0.3s;
+  --t-modal: 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
+}

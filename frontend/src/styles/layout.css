@@ -1,0 +1,52 @@
+/* Layout helpers — capability: app-shell. Hover/active states that are awkward
+   as inline styles live here. */
+
+.rail-btn {
+  position: relative;
+  width: var(--rail-w);
+  height: var(--rail-btn-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b747f; /* idle icon */
+  transition: color 0.12s ease;
+}
+.rail-btn:hover {
+  color: #cbd3db;
+}
+.rail-btn.active {
+  color: #e4ebf1;
+}
+.rail-btn.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--em);
+}
+
+.panel-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.chip {
+  border-radius: var(--r-chip);
+  border: 1px solid var(--line2);
+  background: var(--panel2);
+  color: var(--txt2);
+  cursor: pointer;
+  font: inherit;
+}
+.chip.on {
+  border-color: color-mix(in srgb, var(--em) 55%, transparent);
+  background: color-mix(in srgb, var(--em) 12%, transparent);
+  color: var(--txt);
+}
