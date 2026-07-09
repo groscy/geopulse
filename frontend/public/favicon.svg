@@ -1,0 +1,61 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GeoPulse">
+  <defs>
+    <!-- emerald tile, lit from top-left (accent #3f9d6b family) -->
+    <linearGradient id="gp-tile" x1="64" y1="40" x2="452" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4bb082"/>
+      <stop offset="0.55" stop-color="#3f9d6b"/>
+      <stop offset="1" stop-color="#1f6f4c"/>
+    </linearGradient>
+    <!-- soft top-left sheen -->
+    <radialGradient id="gp-sheen" cx="0.32" cy="0.26" r="0.75">
+      <stop offset="0" stop-color="#eafff2" stop-opacity="0.30"/>
+      <stop offset="0.5" stop-color="#eafff2" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#eafff2" stop-opacity="0"/>
+    </radialGradient>
+    <!-- edge vignette for depth -->
+    <radialGradient id="gp-vignette" cx="0.5" cy="0.52" r="0.62">
+      <stop offset="0.62" stop-color="#0a2418" stop-opacity="0"/>
+      <stop offset="1" stop-color="#0a2418" stop-opacity="0.38"/>
+    </radialGradient>
+    <!-- glowing pulse core -->
+    <radialGradient id="gp-core" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.28" stop-color="#eafff2"/>
+      <stop offset="0.55" stop-color="#eafff2" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#eafff2" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="gp-globe">
+      <circle cx="256" cy="256" r="150"/>
+    </clipPath>
+  </defs>
+
+  <!-- rounded emerald tile -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#gp-tile)"/>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#gp-sheen)"/>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#gp-vignette)"/>
+
+  <!-- wireframe globe: graticule of meridians + parallels -->
+  <g clip-path="url(#gp-globe)" stroke="#eafff2" stroke-linecap="round" fill="none">
+    <!-- parallels (latitude chords) -->
+    <g stroke-opacity="0.42" stroke-width="3.4">
+      <line x1="128" y1="178" x2="384" y2="178"/>
+      <line x1="106" y1="256" x2="406" y2="256"/>
+      <line x1="128" y1="334" x2="384" y2="334"/>
+    </g>
+    <!-- meridians (longitude ellipses) -->
+    <g stroke-opacity="0.42" stroke-width="3.4">
+      <ellipse cx="256" cy="256" rx="97" ry="150"/>
+      <ellipse cx="256" cy="256" rx="44" ry="150"/>
+      <line x1="256" y1="106" x2="256" y2="406"/>
+    </g>
+  </g>
+  <!-- globe limb (sphere edge) -->
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#eafff2" stroke-opacity="0.85" stroke-width="5"/>
+
+  <!-- pulse ring emanating from the core -->
+  <circle cx="256" cy="256" r="74" fill="none" stroke="#eafff2" stroke-opacity="0.30" stroke-width="3"/>
+
+  <!-- glowing pulse core (the brand's inner dot) -->
+  <circle cx="256" cy="256" r="70" fill="url(#gp-core)"/>
+  <circle cx="256" cy="256" r="21" fill="#f4fff8"/>
+</svg>
