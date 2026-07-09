@@ -1,0 +1,85 @@
+schema: spec-driven
+
+context: |
+  # GeoPulse — a status page for the planet
+
+  A local-first web dashboard that renders every country as a "service" on an
+  interactive 3D globe, with a composite health state (Operational / Degraded /
+  Disrupted / Stale) computed from quasi-real-time economic, market, and
+  geopolitical signals. Visual language mirrors the AWS Health Dashboard /
+  Grafana / Datadog — calm, cartographic, operations-console, never a news site.
+  Goal is situational awareness (what changed, when, by how much vs a country's
+  OWN baseline), not prediction or editorial judgment.
+
+  ## Architecture (Docker Compose, single host, local-first)
+  - Ingestion workers, one container per source family, each with its own scheduler:
+    markets-worker (Finnhub / Twelve Data / Stooq fallback, ~5 min),
+    fx-worker (exchangerate.host, ~15 min),
+    gdelt-worker (GDELT 2.0 events + tone, country dyads, 15 min),
+    macro-worker (World Bank, IMF SDMX, OECD, FRED, Eurostat, daily),
+    conflict-worker (ACLED / UCDP, daily).
+  - Each worker normalizes to Observation(country, metric, value, ts, source, confidence).
+  - TimescaleDB: observations hypertable + continuous aggregates + retention policies.
+  - scoring-engine (runs every 5 min): rolling 90d per-country baselines -> z-scores,
+    domain rollups (economy / markets / relations), composite state + hysteresis,
+    threshold detector -> incidents table.
+  - api: FastAPI, REST + SSE stream for live tile/incident updates (SSE, not WebSockets).
+  - frontend: Vite + React; globe drawn imperatively on <canvas> with D3-geo orthographic
+    (world-atlas countries-110m topojson). deck.gl ArcLayer or equivalent for relation arcs.
+
+  ## Core data model
+  - observation(country char(3), metric text, value double, ts timestamptz, source text,
+    confidence real, PK (country, metric, ts, source)) — Timescale hypertable, 90d retention.
+  - dyad_observation(country_a, country_b, metric, value, ts, source) — e.g. gdelt_tone.
+  - score(country, domain[economy|markets|relations|composite], value real,
+    state[operational|degraded|disrupted|stale], computed_at, inputs jsonb for auditability).
+  - incident(id uuid, severity, countries char(3)[], metric, threshold, started_at,
+    resolved_at, title, detail jsonb).
+
+  ## Scoring (v1, deliberately simple)
+  1. Per metric: z = (x - mu_90d) / sigma_90d against the country's OWN rolling baseline.
+  2. Domain score = weighted mean of clamped z-scores (clamp +/-4), weights in config,
+     staleness-discounted: weight * exp(-age / tau_metric).
+  3. State: |domain z| < 1 -> Operational; 1-2 -> Degraded; > 2 -> Disrupted;
+     effective coverage < 50% -> Stale.
+  4. Composite = worst of the three domains (AWS-style); per-domain chips shown alongside.
+  5. Hysteresis: a tile must hold a new state for N consecutive evals (default N=3) before
+     flipping. Enter at |z|=1.0, recover below |z|=0.7.
+
+  ## Key ADRs (accepted)
+  - ADR-001 TimescaleDB over SQLite+DuckDB (continuous aggregates + retention; single container).
+  - ADR-002 globe.gl / D3-geo + deck.gl ArcLayer over CesiumJS (no terrain need; 60fps budget).
+  - ADR-003 Per-country baselines over global normalization (self-relative z; 30d warm-up = Stale).
+  - ADR-004 SSE over WebSockets (server->client only, low frequency, proxy-friendly).
+  - ADR-005 Worst-of composite over weighted-average (matches AWS mental model).
+
+  ## Non-functional constraints
+  - Local-first: entire stack on one machine via Docker Compose; only egress is upstream public APIs.
+  - Refresh cadence: markets <= 5 min (~30 indices), GDELT 15 min, macro daily, structural quarterly.
+  - Rate-limit resilience: token buckets per provider; graceful degradation = stale-flag, not error.
+  - Frontend budget: initial load < 3 MB gzipped excluding basemap; 60 fps globe on Apple Silicon / mid GPU.
+  - Auditability: every score decomposable to raw observations
+    (score -> domain scores -> z-scores -> (value, source, timestamp)).
+  - Staleness is a first-class state: every displayed value shows source + age; scores from stale
+    data are visually flagged (grey diagonal hatch), never silently presented as current.
+
+  ## Design system (see design_handoff_geopulse/ for full spec + reference HTML)
+  - Colors: bg #0e1116, panel #141a21, card #161d25, line #242c36, txt #c8d1db, accent/em #3f9d6b.
+  - State colors: Operational #3f9d6b, Degraded #d3a03f, Disrupted #cc5b52,
+    Stale #6b7480 + 45deg diagonal hatch (must read distinct from healthy).
+  - Fonts: IBM Plex Sans (UI/labels), IBM Plex Mono (all numeric values, timestamps, codes). Base 13px.
+  - Layout: top bar 46px, left rail 72px (Health single-select + independent Overlay toggles),
+    globe stage flex:1, right panel 380px (incident feed <-> country drill-down <-> overlay panels).
+
+  ## Non-goals (v1)
+  Forecasting, trading signals, per-company equity data, mobile app, multi-user accounts,
+  historical replay beyond 90 days.
+
+# Per-artifact rules (optional)
+rules:
+  proposal:
+    - Always include a "Non-goals" / "Out of scope" section to keep the change focused.
+    - Tie the change back to the milestone (M1-M4) and the FR/NFR it satisfies.
+  tasks:
+    - Break work into small, independently verifiable steps.
+    - Order tasks so the stack can be brought up incrementally (schema -> worker -> scoring -> api -> frontend).
