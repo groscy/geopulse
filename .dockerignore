@@ -1,0 +1,9 @@
+# keep the services image build context small
+frontend
+openspec
+design_handoff_geopulse
+.claude
+.git
+**/__pycache__
+**/*.pyc
+*.md

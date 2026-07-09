@@ -1,0 +1,125 @@
+name: geopulse
+
+# GeoPulse — local-first stack (NFR-1). Egress only to public upstream APIs.
+#
+# Profiles (M4):
+#   lite (default) : db + migrate + markets + gdelt + fx + scoring + api + frontend
+#                    -> `podman compose up --build`  (or `--profile lite up`)
+#   full           : lite + macro-worker (World Bank macro)
+#                    -> `podman compose --profile full up --build`
+# Only macro-worker is profile-gated ("full"); everything else runs in both.
+
+x-service-env: &service-env
+  DATABASE_URL: postgresql://geopulse:geopulse@db:5432/geopulse
+
+services:
+  db:
+    image: docker.io/timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: geopulse
+      POSTGRES_PASSWORD: geopulse
+      POSTGRES_DB: geopulse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geopulse -d geopulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Builds the shared services image (geopulse/services:local) and runs migrations once.
+  migrate:
+    build:
+      context: .
+      dockerfile: services/Dockerfile
+    image: geopulse/services:local
+    command: ["python", "-m", "common.migrate"]
+    environment: *service-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  markets-worker:
+    image: geopulse/services:local
+    command: ["python", "markets-worker/main.py"]
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql://geopulse:geopulse@db:5432/geopulse
+      # override .env: daily EOD data + free-tier quota -> hourly (R-1)
+      MARKETS_INTERVAL: "3600"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  gdelt-worker:
+    image: geopulse/services:local
+    command: ["python", "gdelt-worker/main.py"]
+    env_file: [.env]
+    environment: *service-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # macro-worker is "full"-only (lite runs markets + gdelt + fx). The other
+  # services have no `profiles` key, so they run in every profile AND on a plain
+  # `up` — i.e. the default set IS lite. `--profile full up` adds this worker.
+  macro-worker:
+    image: geopulse/services:local
+    command: ["python", "macro-worker/main.py"]
+    profiles: ["full"]
+    env_file: [.env]
+    environment: *service-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  fx-worker:
+    image: geopulse/services:local
+    command: ["python", "fx-worker/main.py"]
+    env_file: [.env]
+    environment: *service-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  scoring-engine:
+    image: geopulse/services:local
+    command: ["python", "scoring-engine/main.py"]
+    env_file: [.env]
+    environment: *service-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  api:
+    image: geopulse/services:local
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment: *service-env
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE: "http://localhost:8000"
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
