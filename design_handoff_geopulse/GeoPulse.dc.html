@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<style>
+:root{--bg:#0e1116;--panel:#141a21;--panel2:#10161c;--card:#161d25;--line:#242c36;--line2:#1a212a;--txt:#c8d1db;--txt2:#8a949f;--txt3:#5b646f;--em:#3f9d6b;--op:#3f9d6b;--deg:#d3a03f;--dis:#cc5b52;--stale:#6b7480;--mono:'IBM Plex Mono',ui-monospace,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--txt);font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:var(--em);text-decoration:none}
+a:hover{color:#5cc08a}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#283039;border-radius:6px}
+::-webkit-scrollbar-thumb:hover{background:#333d48}
+::-webkit-scrollbar-track{background:transparent}
+input{font-family:inherit}
+button{font-family:inherit}
+@keyframes gp-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes gp-slide{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes gp-fade{from{opacity:0}to{opacity:1}}
+@keyframes gp-modal{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+
+<div style="height:100vh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)">
+
+  <!-- ============ TOP BAR ============ -->
+  <div style="flex:none;height:46px;display:flex;align-items:center;gap:18px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel2);z-index:20">
+    <div onClick="{{ goHome }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;flex:none">
+      <span style="position:relative;width:22px;height:22px;border-radius:6px;background:linear-gradient(150deg,#1c2b24,#0f1a15);border:1px solid #294a3a;display:flex;align-items:center;justify-content:center">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--em);box-shadow:0 0 8px var(--em)"></span>
+      </span>
+      <span style="font-weight:700;font-size:14px;letter-spacing:-.01em;color:#e7eef4">GeoPulse</span>
+      <span style="font-size:10.5px;color:var(--txt3);font-weight:500;letter-spacing:.02em;padding-left:2px">planetary status</span>
+    </div>
+
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:16px">
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--op)"></span><span style="font-family:var(--mono);font-size:12px;color:var(--txt)">142</span><span style="font-size:11px;color:var(--txt3)">operational</span></div>
+      <div style="width:1px;height:14px;background:var(--line)"></div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--deg)"></span><span style="font-family:var(--mono);font-size:12px;color:var(--txt)">38</span><span style="font-size:11px;color:var(--txt3)">degraded</span></div>
+      <div style="width:1px;height:14px;background:var(--line)"></div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--dis)"></span><span style="font-family:var(--mono);font-size:12px;color:var(--txt)">15</span><span style="font-size:11px;color:var(--txt3)">disrupted</span></div>
+      <div style="width:1px;height:14px;background:var(--line)"></div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:2px;background:repeating-linear-gradient(45deg,#5b646f 0 2px,transparent 2px 4px)"></span><span style="font-family:var(--mono);font-size:12px;color:var(--txt)">8</span><span style="font-size:11px;color:var(--txt3)">stale</span></div>
+    </div>
+
+    <div style="flex:none;display:flex;align-items:center;gap:16px">
+      <div style="display:flex;align-items:center;gap:7px">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--em);animation:gp-pulse 2.4s ease-in-out infinite"></span>
+        <span style="font-size:11px;color:var(--txt2)">Live · updated <span style="font-family:var(--mono);color:var(--txt)">{{ freshAgo }}s</span> ago</span>
+      </div>
+      <div style="width:1px;height:14px;background:var(--line)"></div>
+      <span style="font-family:var(--mono);font-size:13px;color:#e7eef4;letter-spacing:.02em">{{ now }}</span>
+      <span style="font-size:10.5px;color:var(--txt3);font-weight:500">UTC</span>
+    </div>
+  </div>
+
+  <!-- ============ METHODOLOGY PAGE ============ -->
+  <sc-if value="{{ isMethod }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow-y:auto;background:var(--bg);animation:gp-fade .25s ease">
+      <div style="max-width:840px;margin:0 auto;padding:44px 40px 90px">
+        <button onClick="{{ goHome }}" style="display:inline-flex;align-items:center;gap:6px;background:none;border:1px solid var(--line);color:var(--txt2);font-size:12px;padding:6px 11px;border-radius:6px;cursor:pointer;margin-bottom:30px" style-hover="border-color:#33404d;color:var(--txt)">← Back to dashboard</button>
+        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--em);font-weight:600;margin-bottom:12px">Methodology</div>
+        <h1 style="font-size:34px;line-height:1.15;margin:0 0 16px;font-weight:600;letter-spacing:-.02em;color:#eef3f8">How GeoPulse scores the planet</h1>
+        <p style="font-size:15px;line-height:1.7;color:var(--txt2);margin:0 0 8px;max-width:66ch">GeoPulse treats every country like a fleet of services. Each domain — Economy, Markets, Relations, Conflict — emits raw signals that are standardised against the country's own recent history, mapped to a discrete state, and then combined into a single composite. The goal is a calm, comparable read on planetary health, not a news feed.</p>
+
+        <h2 style="font-size:18px;margin:40px 0 12px;font-weight:600;color:#eef3f8">1 · Z-scores against a 90-day baseline</h2>
+        <p style="font-size:14px;line-height:1.7;color:var(--txt2);margin:0 0 20px;max-width:66ch">Every metric is scored relative to <em style="color:var(--txt);font-style:normal">itself</em>, not to other countries. We compute a rolling mean μ and standard deviation σ over a trailing 90-day window and express today's value as a z-score, <span style="font-family:var(--mono);color:var(--txt)">z = (x − μ) / σ</span>. A z-score isolates <em style="color:var(--txt);font-style:normal">unusual-for-this-country</em> behaviour, so Argentina's structurally high inflation only trips a state when it accelerates beyond its own norm.</p>
+
+        <!-- z-score diagram -->
+        <div style="border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:26px 24px 20px;margin:0 0 12px">
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin-bottom:18px;font-weight:600">State thresholds on the z-axis</div>
+          <svg viewBox="0 0 760 130" style="width:100%;height:auto;display:block" data-om-raster="true">
+            <defs>
+              <linearGradient id="gp-op" x1="0" x2="1"><stop offset="0" stop-color="#3f9d6b" stop-opacity=".28"/><stop offset="1" stop-color="#3f9d6b" stop-opacity=".28"/></linearGradient>
+            </defs>
+            <rect x="310" y="30" width="140" height="34" fill="#3f9d6b" fill-opacity=".16"/>
+            <rect x="230" y="30" width="80" height="34" fill="#d3a03f" fill-opacity=".16"/><rect x="450" y="30" width="80" height="34" fill="#d3a03f" fill-opacity=".16"/>
+            <rect x="60" y="30" width="170" height="34" fill="#cc5b52" fill-opacity=".16"/><rect x="530" y="30" width="170" height="34" fill="#cc5b52" fill-opacity=".16"/>
+            <line x1="60" y1="64" x2="700" y2="64" stroke="#2c3640" stroke-width="1.5"/>
+            <g font-family="IBM Plex Mono, monospace" font-size="11" fill="#8a949f" text-anchor="middle">
+              <line x1="60" y1="60" x2="60" y2="68" stroke="#2c3640"/><text x="60" y="86">−3</text>
+              <line x1="230" y1="60" x2="230" y2="68" stroke="#2c3640"/><text x="230" y="86">−2</text>
+              <line x1="310" y1="56" x2="310" y2="72" stroke="#3d4954"/><text x="310" y="88">−1</text>
+              <line x1="380" y1="56" x2="380" y2="72" stroke="#3d4954"/><text x="380" y="88">0</text>
+              <line x1="450" y1="56" x2="450" y2="72" stroke="#3d4954"/><text x="450" y="88">+1</text>
+              <line x1="530" y1="60" x2="530" y2="68" stroke="#2c3640"/><text x="530" y="86">+2</text>
+              <line x1="700" y1="60" x2="700" y2="68" stroke="#2c3640"/><text x="700" y="86">+3</text>
+            </g>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="11.5" font-weight="600" text-anchor="middle">
+              <text x="380" y="24" fill="#3f9d6b">OPERATIONAL · |z| &lt; 1</text>
+              <text x="270" y="24" fill="#d3a03f">DEGRADED</text><text x="490" y="24" fill="#d3a03f">1 ≤ |z| &lt; 2</text>
+              <text x="145" y="24" fill="#cc5b52">DISRUPTED · |z| ≥ 2</text><text x="615" y="24" fill="#cc5b52">DISRUPTED</text>
+            </g>
+            <circle cx="315" cy="64" r="4.5" fill="#e7eef4"/><text x="315" y="112" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#c8d1db" text-anchor="middle">Nikkei z −1.6</text>
+          </svg>
+        </div>
+        <p style="font-size:12px;line-height:1.6;color:var(--txt3);margin:0 0 20px">Bands are symmetric: a metric is unhealthy whether it moves sharply up or down relative to baseline. Directionality (good vs bad) is applied per-metric before mapping.</p>
+
+        <h2 style="font-size:18px;margin:40px 0 12px;font-weight:600;color:#eef3f8">2 · Worst-of composite</h2>
+        <p style="font-size:14px;line-height:1.7;color:var(--txt2);margin:0 0 20px;max-width:66ch">A country's composite state is the <em style="color:var(--txt);font-style:normal">worst</em> of its domain states — never an average. One disrupted domain disrupts the country. This mirrors an operations dashboard: a single failing service degrades the whole page, and averaging would mask real trouble.</p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin:0 0 12px">
+          <div style="flex:1;min-width:210px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:16px">
+            <div style="font-size:12px;font-weight:600;color:var(--txt);margin-bottom:12px">Japan → <span style="color:var(--deg)">Degraded</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-family:var(--mono);font-size:12px">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--txt2)">Economy</span><span style="color:var(--op)">operational</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--txt2)">Markets</span><span style="color:var(--deg)">degraded ◂ worst</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--txt2)">Relations</span><span style="color:var(--op)">operational</span></div>
+            </div>
+          </div>
+          <div style="flex:1;min-width:210px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:16px">
+            <div style="font-size:12px;font-weight:600;color:var(--txt);margin-bottom:12px">Argentina → <span style="color:var(--dis)">Disrupted</span></div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-family:var(--mono);font-size:12px">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--txt2)">Economy</span><span style="color:var(--dis)">disrupted ◂ worst</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--txt2)">Markets</span><span style="color:var(--deg)">degraded</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--txt2)">Relations</span><span style="color:var(--op)">operational</span></div>
+            </div>
+          </div>
+        </div>
+
+        <h2 style="font-size:18px;margin:40px 0 12px;font-weight:600;color:#eef3f8">3 · Hysteresis</h2>
+        <p style="font-size:14px;line-height:1.7;color:var(--txt2);margin:0 0 20px;max-width:66ch">States are sticky. A metric must cross a threshold <em style="color:var(--txt);font-style:normal">and hold</em> for a confirmation window before the state changes — <span style="font-family:var(--mono);color:var(--txt)">enter at |z| = 1.0</span>, but only <span style="font-family:var(--mono);color:var(--txt)">recover below |z| = 0.7</span>. This dead-band prevents a jittery metric from flickering between states and keeps the map calm.</p>
+
+        <h2 style="font-size:18px;margin:40px 0 12px;font-weight:600;color:#eef3f8">4 · Staleness is a state, not a gap</h2>
+        <p style="font-size:14px;line-height:1.7;color:var(--txt2);margin:0 0 20px;max-width:66ch">If a metric's freshest observation is older than its expected cadence (e.g. quarterly GDP more than ~100 days old), the metric — and any composite that depends on it — is marked <span style="color:var(--stale)">stale</span>, rendered in grey with a diagonal hatch. Stale never masquerades as healthy: an absent signal is reported as absent, with its source and age shown on every value.</p>
+        <div style="display:flex;gap:16px;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:16px 18px;margin-bottom:8px">
+          <span style="width:40px;height:40px;border-radius:8px;flex:none;background:repeating-linear-gradient(45deg,#3a424c 0 3px,#20262e 3px 6px)"></span>
+          <div><div style="font-size:13px;font-weight:600;color:var(--txt)">Eritrea · macro data 94 days old</div><div style="font-size:12px;color:var(--txt3);margin-top:3px;font-family:var(--mono)">World Bank · last GDP print 2026-04-05 · exceeds 90d cadence</div></div>
+        </div>
+        <p style="font-size:12px;line-height:1.6;color:var(--txt3);margin:24px 0 0;border-top:1px solid var(--line2);padding-top:16px">Sources: national statistics offices, central banks, exchange feeds, IMF/World Bank, GDELT event tone. Scores recompute on each source tick; the freshness indicator reflects the oldest contributing feed.</p>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ MAIN APP BODY ============ -->
+  <sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;min-height:0;display:flex">
+
+      <!-- LEFT RAIL -->
+      <div style="flex:none;width:72px;border-right:1px solid var(--line);background:var(--panel2);display:flex;flex-direction:column;align-items:center;padding:10px 0">
+        <button onClick="{{ toggleSearch }}" title="Search countries" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colSearch }}" style-hover="color:#cbd3db">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="20" y2="20"/></svg>
+        </button>
+        <div style="flex:none;width:34px;height:1px;background:var(--line);margin:6px 0"></div>
+        <div style="flex:none;font-size:8.5px;letter-spacing:.12em;color:var(--txt3);text-transform:uppercase;margin-bottom:2px;font-weight:600">Health</div>
+
+        <div style="flex:1;min-height:0;width:100%;overflow-y:auto;display:flex;flex-direction:column;align-items:center">
+          <button onClick="{{ setComposite }}" title="Composite health" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colComposite }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isComposite }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
+          </button>
+          <button onClick="{{ setEconomy }}" title="Economy" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colEconomy }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isEconomy }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><line x1="4" y1="20" x2="20" y2="20"/><rect x="5" y="12" width="3.4" height="6"/><rect x="10.3" y="8" width="3.4" height="10"/><rect x="15.6" y="5" width="3.4" height="13"/></svg>
+          </button>
+          <button onClick="{{ setMarkets }}" title="Markets" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colMarkets }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isMarkets }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polyline points="3,15 8,10 12,13 16,6 21,9"/><polyline points="16,6 21,6 21,11" fill="none"/></svg>
+          </button>
+          <button onClick="{{ setConflict }}" title="Conflict" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colConflict }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isConflict }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 4 L21 20 L3 20 Z"/><line x1="12" y1="10" x2="12" y2="15"/><circle cx="12" cy="17.6" r=".2" stroke-width="2"/></svg>
+          </button>
+
+          <div style="flex:none;width:26px;height:1px;background:var(--line2);margin:6px 0"></div>
+          <div style="flex:none;font-size:8.5px;letter-spacing:.12em;color:var(--txt3);text-transform:uppercase;margin-bottom:2px;font-weight:600">Overlays</div>
+          <button onClick="{{ toggleRelations }}" title="Relations" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colRelations }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isRelations }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="7" r="2.4"/><circle cx="18" cy="9" r="2.4"/><circle cx="11" cy="18" r="2.4"/><line x1="7.9" y1="8.3" x2="15.9" y2="8"/><line x1="7.3" y1="9" x2="10" y2="15.7"/><line x1="16.6" y1="10.8" x2="12" y2="16.3"/></svg>
+          </button>
+          <button onClick="{{ toggleIndustry }}" title="Industries" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colIndustry }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isIndustry }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 20 V11 l6 4 V11 l6 4 V6 h5 v14 z"/><line x1="3" y1="20" x2="21" y2="20"/></svg>
+          </button>
+          <button onClick="{{ toggleAir }}" title="Air traffic" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colAir }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isAir }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15.5 L3 11.5 v-2 l5.5 1 L11 4 h2 l-1 7 6.5 1.2 z"/></svg>
+          </button>
+          <button onClick="{{ toggleSat }}" title="Satellites" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colSat }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isSat }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M6.5 6.5 L9 9 M15 15 l2.5 2.5"/><path d="M5 9 L9 5 l3 3 -4 4 z" fill="currentColor" fill-opacity=".18"/><path d="M12 16 l4 -4 3 3 -4 4 z" fill="currentColor" fill-opacity=".18"/><path d="M15.5 5.5 a4 4 0 0 1 3 3 M17 3 a7 7 0 0 1 4 4"/></svg>
+          </button>
+          <button onClick="{{ toggleWeather }}" title="Meteorological" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colWeather }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isWeather }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 18 h9 a3.5 3.5 0 0 0 0 -7 a5 5 0 0 0 -9.6 1.4 A3 3 0 0 0 7 18 z"/></svg>
+          </button>
+          <button onClick="{{ toggleSun }}" title="Day / night" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colSun }}" style-hover="color:#cbd3db">
+            <sc-if value="{{ isSunLayer }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:var(--em)"></span></sc-if>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="5"/><path d="M12 12 a5 5 0 0 0 0 -10 z" fill="currentColor" fill-opacity=".22" stroke="none"/><g stroke-linecap="round"><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.5" y1="4.5" x2="6.2" y2="6.2"/><line x1="17.8" y1="17.8" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.2" y2="17.8"/><line x1="17.8" y1="6.2" x2="19.5" y2="4.5"/></g></svg>
+          </button>
+        </div>
+
+        <div style="flex:none;width:34px;height:1px;background:var(--line);margin:6px 0"></div>
+        <button onClick="{{ openMethod }}" title="Methodology" style="flex:none;position:relative;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:{{ colMethod }}" style-hover="color:#cbd3db">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4 h9 a3 3 0 0 1 3 3 v13 h-9 a3 3 0 0 0 -3 3 z"/><path d="M17 4 h2 v16"/><line x1="8" y1="9" x2="13" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>
+        </button>
+        <button title="Settings" style="flex:none;width:100%;height:46px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--txt3)" style-hover="color:#cbd3db">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><line x1="4" y1="8" x2="20" y2="8"/><circle cx="15" cy="8" r="2.4" fill="var(--panel2)"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="16" r="2.4" fill="var(--panel2)"/></svg>
+        </button>
+      </div>
+
+      <!-- GLOBE STAGE -->
+      <div id="gp-wrap" style="flex:1;position:relative;min-width:0;overflow:hidden;background:radial-gradient(120% 100% at 50% 46%,#111820 0%,#0d1116 62%,#0b0e13 100%)">
+        <canvas id="gp-canvas" style="position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab"></canvas>
+
+        <!-- selected-country indicator popup (positioned imperatively) -->
+        <sc-if value="{{ cd }}" hint-placeholder-val="{{ false }}">
+          <div id="gp-popup" style="position:absolute;left:0;top:0;z-index:14;pointer-events:none;opacity:0;transition:opacity .16s ease;will-change:transform,left,top">
+            <div style="position:relative;width:210px;background:rgba(17,23,30,.95);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:11px;box-shadow:0 16px 40px rgba(0,0,0,.55);padding:11px 13px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <sc-if value="{{ cd.flag }}" hint-placeholder-val="{{ false }}"><img src="{{ cd.flag }}" style="width:19px;height:14px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.1)"/></sc-if>
+                <span style="font-size:13px;font-weight:600;color:#eef3f8;flex:1;min-width:0">{{ cd.name }}</span>
+                <span style="width:8px;height:8px;border-radius:2px;background:{{ cd.color }};box-shadow:0 0 7px {{ cd.glow }}"></span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 12px">
+                <div><div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--txt3);font-weight:600">GDP</div><div style="font-family:var(--mono);font-size:13px;color:var(--txt);margin-top:2px">{{ cd.gdp }}</div></div>
+                <div><div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--txt3);font-weight:600">GDP / capita</div><div style="font-family:var(--mono);font-size:13px;color:var(--txt);margin-top:2px">{{ cd.gdppc }}</div></div>
+                <div><div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--txt3);font-weight:600">Happiness</div><div style="font-family:var(--mono);font-size:13px;color:var(--txt);margin-top:2px">{{ cd.happy }} <span style="font-size:10px;color:var(--txt3)">{{ cd.happyRank }}</span></div></div>
+                <div><div style="font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--txt3);font-weight:600">Population</div><div style="font-family:var(--mono);font-size:13px;color:var(--txt);margin-top:2px">{{ cd.pop }}</div></div>
+              </div>
+              <div id="gp-arrow-d" style="position:absolute;left:50%;bottom:-6px;width:11px;height:11px;background:rgba(17,23,30,.95);border-right:1px solid var(--line);border-bottom:1px solid var(--line);transform:translateX(-50%) rotate(45deg)"></div>
+              <div id="gp-arrow-u" style="position:absolute;left:50%;top:-6px;width:11px;height:11px;background:rgba(17,23,30,.95);border-left:1px solid var(--line);border-top:1px solid var(--line);transform:translateX(-50%) rotate(45deg);display:none"></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- layer title chip -->
+        <div style="position:absolute;top:16px;left:18px;display:flex;align-items:center;gap:9px;pointer-events:none">
+          <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--txt3);font-weight:600">Layer</span>
+          <span style="font-size:13px;font-weight:600;color:#e7eef4;letter-spacing:-.01em">{{ layerName }}</span>
+        </div>
+
+        <!-- search overlay -->
+        <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:44px;left:18px;width:280px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 46px rgba(0,0,0,.5);z-index:15;animation:gp-slide .18s ease;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line2)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--txt3)" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.5" y1="15.5" x2="20" y2="20"/></svg>
+              <input autofocus placeholder="Search a country…" value="{{ searchQ }}" onInput="{{ onSearch }}" style="flex:1;background:none;border:none;outline:none;color:var(--txt);font-size:13px"/>
+            </div>
+            <div style="max-height:280px;overflow-y:auto;padding:5px">
+              <sc-for list="{{ searchResults }}" as="r" hint-placeholder-count="6">
+                <div onClick="{{ r.select }}" style="display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;cursor:pointer" style-hover="background:#1c242d">
+                  <span style="width:8px;height:8px;border-radius:50%;flex:none;background:{{ r.color }}"></span>
+                  <span style="font-size:12.5px;color:var(--txt)">{{ r.name }}</span>
+                  <span style="flex:1"></span>
+                  <span style="font-size:10.5px;color:var(--txt3);font-family:var(--mono)">{{ r.state }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- state legend -->
+        <div style="position:absolute;left:18px;bottom:16px;display:flex;flex-direction:column;gap:9px;background:rgba(16,22,28,.72);backdrop-filter:blur(6px);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;pointer-events:none">
+          <div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--txt3);font-weight:600">{{ legendTitle }}</div>
+          <sc-if value="{{ showToneLegend }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:7px;width:150px">
+              <div style="height:6px;border-radius:3px;background:linear-gradient(90deg,#cc5b52,#d3a03f,#3f9d6b)"></div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt2)"><span>hostile</span><span>tense</span><span>warm</span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showStateLegend }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:var(--op)"></span><span style="font-size:11px;color:var(--txt2)">Operational</span></div>
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:var(--deg)"></span><span style="font-size:11px;color:var(--txt2)">Degraded</span></div>
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:var(--dis)"></span><span style="font-size:11px;color:var(--txt2)">Disrupted</span></div>
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:2px;background:repeating-linear-gradient(45deg,#5b646f 0 2px,transparent 2px 4px)"></span><span style="font-size:11px;color:var(--txt2)">Stale / no data</span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showShareLegend }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:7px;width:150px">
+              <div style="height:6px;border-radius:3px;background:linear-gradient(90deg,rgba(74,168,201,.28),#4aa8c9)"></div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt2)"><span>minor</span><span>dominant</span></div>
+              <div style="font-size:10px;color:var(--txt3)">Node size = value share · number = rank</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showChainLegend }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:7px;width:160px">
+              <div style="height:6px;border-radius:3px;background:linear-gradient(90deg,#c9974a,#57ab73,#3f9d6b)"></div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt2)"><span>raw material</span><span>finished</span></div>
+              <div style="font-size:10px;color:var(--txt3)">Numbered stages · flow → to market</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showTempLegend }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:7px;width:160px">
+              <div style="height:6px;border-radius:3px;background:linear-gradient(90deg,#3f6fc4,#4aa8c9,#57ab73,#cbb043,#d1863f,#cc5b52)"></div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt2)"><span>−10°C</span><span>40°C</span></div>
+              <div style="font-size:10px;color:var(--txt3)">Spirals = active storm systems</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showSunLegend }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:7px;width:158px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:11px;height:11px;border-radius:2px;background:rgba(5,8,15,.7);border:1px solid #2a3440"></span><span style="font-size:11px;color:var(--txt2)">Night side</span></div>
+              <div style="font-size:10px;color:var(--txt3)">Thin meridians = 1-hour zones</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showTraffic }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:10.5px;color:var(--txt2);width:150px">{{ trafficLabel }}</div>
+          </sc-if>
+        </div>
+
+        <div style="position:absolute;right:16px;bottom:16px;font-size:10.5px;color:var(--txt3);pointer-events:none;font-family:var(--mono)">drag to rotate · click a country</div>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div style="flex:none;width:380px;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0">
+
+        <!-- FEED STATE -->
+        <sc-if value="{{ showFeed }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:none;padding:14px 16px 12px;border-bottom:1px solid var(--line2)">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+              <span style="font-size:14px;font-weight:600;color:#e7eef4">Global incidents</span>
+              <span style="font-size:11px;color:var(--txt3);font-family:var(--mono)">{{ feedCount }} active</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button onClick="{{ setAll }}" style="flex:1;font-size:11.5px;padding:6px 0;border-radius:6px;border:1px solid {{ chipAllBorder }};background:{{ chipAllBg }};color:{{ chipAllColor }};cursor:pointer">All</button>
+              <button onClick="{{ setOngoing }}" style="flex:1;font-size:11.5px;padding:6px 0;border-radius:6px;border:1px solid {{ chipOnBorder }};background:{{ chipOnBg }};color:{{ chipOnColor }};cursor:pointer">Ongoing</button>
+              <button onClick="{{ setResolved }}" style="flex:1;font-size:11.5px;padding:6px 0;border-radius:6px;border:1px solid {{ chipReBorder }};background:{{ chipReBg }};color:{{ chipReColor }};cursor:pointer">Resolved</button>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ incidents }}" as="inc" hint-placeholder-count="5">
+              <div onClick="{{ inc.select }}" style="animation:gp-slide .3s ease both;cursor:pointer;padding:13px 14px;border:1px solid var(--line2);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:10px" style-hover="border-color:#33404d;background:#18202a">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <span style="flex:none;margin-top:4px;width:8px;height:8px;border-radius:50%;background:{{ inc.color }};box-shadow:0 0 0 4px {{ inc.glow }}"></span>
+                  <span style="font-weight:600;font-size:13px;color:#dfe7ee;flex:1;line-height:1.35">{{ inc.title }}</span>
+                  <sc-if value="{{ inc.hasChart }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ inc.open }}" title="Open incident detail" style="flex:none;color:var(--txt3);display:flex;padding:2px" style-hover="color:var(--em)">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="4,14 9,9 13,12 20,5"/><rect x="3.5" y="3.5" width="17" height="17" rx="2" opacity=".0"/></svg>
+                    </span>
+                  </sc-if>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <div style="display:flex;gap:4px">
+                    <sc-for list="{{ inc.flags }}" as="f" hint-placeholder-count="1"><img src="{{ f }}" style="width:19px;height:14px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.09)"/></sc-for>
+                  </div>
+                  <span style="font-family:var(--mono);font-size:11.5px;color:var(--txt2)">{{ inc.metric }}</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font-size:11px;color:var(--txt3);font-family:var(--mono)">since {{ inc.since }}</span>
+                  <span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;color:{{ inc.badgeColor }};background:{{ inc.badgeBg }};letter-spacing:.02em">{{ inc.badgeLabel }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- INDUSTRIES PANEL -->
+        <sc-if value="{{ isInd }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;padding:14px 16px 12px;border-bottom:1px solid var(--line2)">
+            <div style="font-size:14px;font-weight:600;color:#e7eef4;margin-bottom:2px">Industries</div>
+            <div style="font-size:11px;color:var(--txt3);margin-bottom:11px">Key players &amp; global value chains</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ industries }}" as="i" hint-placeholder-count="5">
+                <button onClick="{{ i.select }}" style="font-size:11.5px;padding:6px 10px;border-radius:7px;border:1px solid {{ i.border }};background:{{ i.bg }};color:{{ i.nameColor }};cursor:pointer">{{ i.name }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:none;padding:12px 16px 0">
+            <div style="display:flex;gap:6px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:3px">
+              <button onClick="{{ setPlayers }}" style="flex:1;font-size:11.5px;padding:6px 0;border-radius:6px;border:1px solid {{ ivPBorder }};background:{{ ivPBg }};color:{{ ivPColor }};cursor:pointer">Key players</button>
+              <button onClick="{{ setChain }}" style="flex:1;font-size:11.5px;padding:6px 0;border-radius:6px;border:1px solid {{ ivCBorder }};background:{{ ivCBg }};color:{{ ivCColor }};cursor:pointer">Supply chain</button>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 22px">
+            <div style="font-size:13px;font-weight:600;color:#dfe7ee;margin-bottom:3px">{{ indName }}</div>
+            <div style="font-size:11px;color:var(--txt3);margin-bottom:14px">{{ indDesc }}</div>
+            <sc-if value="{{ indPlayersActive }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin-bottom:6px">Key players · value share</div>
+              <sc-for list="{{ indPlayers }}" as="p" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line2)">
+                  <span style="flex:none;width:19px;height:19px;border-radius:5px;background:#1c2530;color:#7fcfe8;font-family:var(--mono);font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:600">{{ p.rank }}</span>
+                  <img src="{{ p.flag }}" style="width:19px;height:14px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.09);flex:none"/>
+                  <div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--txt);font-weight:500">{{ p.name }}</div><div style="font-size:10px;color:var(--txt3);margin-top:2px">{{ p.role }}</div></div>
+                  <div style="width:70px;flex:none"><div style="font-family:var(--mono);font-size:12px;color:#8fd3ea;text-align:right;margin-bottom:4px">{{ p.share }}</div><div style="height:5px;border-radius:3px;background:#1c2530;overflow:hidden"><div style="height:100%;width:{{ p.barW }};background:#4aa8c9;border-radius:3px"></div></div></div>
+                </div>
+              </sc-for>
+            </sc-if>
+            <sc-if value="{{ indChainActive }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin-bottom:10px">Value chain · extraction → market</div>
+              <sc-for list="{{ indChain }}" as="c" hint-placeholder-count="5">
+                <div style="display:flex;gap:12px">
+                  <div style="flex:none;display:flex;flex-direction:column;align-items:center">
+                    <span style="width:24px;height:24px;border-radius:50%;background:{{ c.color }};color:#0b0e13;font-family:var(--mono);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ c.num }}</span>
+                    <sc-if value="{{ c.last }}" hint-placeholder-val="{{ false }}"><span style="width:1px;flex:1"></span></sc-if>
+                    <sc-if value="{{ c.notLast }}" hint-placeholder-val="{{ true }}"><span style="width:2px;flex:1;min-height:18px;background:linear-gradient(#3a4550,transparent)"></span></sc-if>
+                  </div>
+                  <div style="flex:1;padding-bottom:16px">
+                    <div style="display:flex;align-items:center;gap:8px"><img src="{{ c.flag }}" style="width:19px;height:14px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.09)"/><span style="font-size:12.5px;color:var(--txt);font-weight:600">{{ c.name }}</span></div>
+                    <div style="font-size:12px;color:var(--txt2);margin-top:4px">{{ c.stage }}</div>
+                    <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3);margin-top:3px;font-weight:600">{{ c.role }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- AIR TRAFFIC PANEL -->
+        <sc-if value="{{ isAir }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;padding:14px 16px 12px;border-bottom:1px solid var(--line2)">
+            <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:14px;font-weight:600;color:#e7eef4">Air traffic</span><span style="font-family:var(--mono);font-size:11px;color:var(--txt3)">{{ airCount }} corridors</span></div>
+            <div style="font-size:11px;color:var(--txt3);margin-top:3px">Live long-haul flight paths, animated by direction of travel</div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px 22px">
+            <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin-bottom:6px">Busiest corridors</div>
+            <sc-for list="{{ airCorridors }}" as="c" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b0c8e0" stroke-width="1.6" style="flex:none"><path d="M21 15.5 L3 11.5 v-2 l5.5 1 L11 4 h2 l-1 7 6.5 1.2 z"/></svg>
+                <div style="flex:1"><div style="font-size:12.5px;color:var(--txt);font-weight:500">{{ c.n }}</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--txt3);margin-top:2px">{{ c.r }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- SATELLITES PANEL -->
+        <sc-if value="{{ isSat }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;padding:14px 16px 12px;border-bottom:1px solid var(--line2)">
+            <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:14px;font-weight:600;color:#e7eef4">Satellites</span><span style="font-family:var(--mono);font-size:11px;color:var(--txt3)">{{ satTotal }} tracked</span></div>
+            <div style="font-size:11px;color:var(--txt3);margin-top:3px">Orbital shells overhead, in view of the current hemisphere</div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px 22px">
+            <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin-bottom:6px">Constellations</div>
+            <sc-for list="{{ satShells }}" as="o" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2)">
+                <span style="flex:none;width:8px;height:8px;border-radius:50%;background:#8fd3ea"></span>
+                <div style="flex:1"><div style="font-size:12.5px;color:var(--txt);font-weight:500">{{ o.n }}</div><div style="font-family:var(--mono);font-size:10.5px;color:var(--txt3);margin-top:2px">altitude {{ o.alt }}</div></div>
+                <span style="font-family:var(--mono);font-size:12px;color:var(--txt2)">{{ o.count }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- METEOROLOGY PANEL -->
+        <sc-if value="{{ isWx }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;padding:14px 16px 12px;border-bottom:1px solid var(--line2)">
+            <div style="font-size:14px;font-weight:600;color:#e7eef4">Meteorological</div>
+            <div style="font-size:11px;color:var(--txt3);margin-top:3px">Surface temperature field &amp; active storm systems</div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px 22px">
+            <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin-bottom:6px">Active storm systems</div>
+            <sc-for list="{{ storms }}" as="st" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line2)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c4daee" stroke-width="1.5" style="flex:none"><path d="M12 12 a5 5 0 0 1 -8 -2 M12 12 a5 5 0 0 0 8 2"/><circle cx="12" cy="12" r="1.6" fill="#c4daee" stroke="none"/></svg>
+                <div style="flex:1"><div style="font-size:12.5px;color:var(--txt);font-weight:500">{{ st.name }}</div></div>
+                <span style="font-family:var(--mono);font-size:11px;color:var(--deg);padding:2px 8px;border-radius:20px;background:rgba(211,160,63,.13)">{{ st.cat }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- DAY / NIGHT PANEL -->
+        <sc-if value="{{ isSun }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;padding:14px 16px 12px;border-bottom:1px solid var(--line2)">
+            <div style="font-size:14px;font-weight:600;color:#e7eef4">Day / night</div>
+            <div style="font-family:var(--mono);font-size:10.5px;color:var(--txt3);margin-top:4px">{{ sunText }}</div>
+          </div>
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 16px 22px">
+            <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin-bottom:6px">Local time by zone</div>
+            <sc-for list="{{ zones }}" as="z" hint-placeholder-count="9">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line2)">
+                <span style="flex:none;width:8px;height:8px;border-radius:50%;background:{{ z.dotColor }}"></span>
+                <div style="flex:1"><div style="font-size:12.5px;color:var(--txt);font-weight:500">{{ z.city }}</div><div style="font-size:10px;color:var(--txt3);margin-top:2px">{{ z.off }} · {{ z.label }}</div></div>
+                <span style="font-family:var(--mono);font-size:13px;color:var(--txt)">{{ z.time }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- COUNTRY DRILL-DOWN -->
+        <sc-if value="{{ cd }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:none;padding:13px 16px 14px;border-bottom:1px solid var(--line2)">
+            <button onClick="{{ closeCountry }}" style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;color:var(--txt3);font-size:11.5px;cursor:pointer;padding:0;margin-bottom:12px" style-hover="color:var(--txt)">← All incidents</button>
+            <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px">
+              <sc-if value="{{ cd.flag }}" hint-placeholder-val="{{ false }}"><img src="{{ cd.flag }}" style="width:30px;height:22px;border-radius:3px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.1)"/></sc-if>
+              <div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:600;color:#eef3f8;letter-spacing:-.01em">{{ cd.name }}</div><div style="font-size:11px;color:var(--txt3);font-family:var(--mono);margin-top:1px">{{ cd.region }}</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:9px;background:{{ cd.bannerBg }};border:1px solid {{ cd.bannerBorder }}">
+              <span style="flex:none;width:11px;height:11px;border-radius:3px;background:{{ cd.color }};box-shadow:0 0 10px {{ cd.glow }}"></span>
+              <div style="flex:1"><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);font-weight:600">Composite state</div><div style="font-size:15px;font-weight:600;color:{{ cd.color }};margin-top:1px">{{ cd.stateLabel }}</div></div>
+              <span style="font-family:var(--mono);font-size:11px;color:var(--txt3)">{{ cd.compAge }}</span>
+            </div>
+          </div>
+
+          <div style="flex:1;min-height:0;overflow-y:auto;padding:14px 16px 22px">
+            <!-- domain chips -->
+            <div style="display:flex;gap:8px;margin-bottom:18px">
+              <div style="flex:1;border:1px solid var(--line2);border-radius:8px;padding:9px 10px;background:var(--panel2)"><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);font-weight:600">Economy</div><div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span style="width:7px;height:7px;border-radius:50%;background:{{ cd.econColor }}"></span><span style="font-size:12px;font-weight:600;color:{{ cd.econColor }}">{{ cd.econLabel }}</span></div></div>
+              <div style="flex:1;border:1px solid var(--line2);border-radius:8px;padding:9px 10px;background:var(--panel2)"><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);font-weight:600">Markets</div><div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span style="width:7px;height:7px;border-radius:50%;background:{{ cd.mktColor }}"></span><span style="font-size:12px;font-weight:600;color:{{ cd.mktColor }}">{{ cd.mktLabel }}</span></div></div>
+              <div style="flex:1;border:1px solid var(--line2);border-radius:8px;padding:9px 10px;background:var(--panel2)"><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);font-weight:600">Relations</div><div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span style="width:7px;height:7px;border-radius:50%;background:{{ cd.relColor }}"></span><span style="font-size:12px;font-weight:600;color:{{ cd.relColor }}">{{ cd.relLabel }}</span></div></div>
+            </div>
+
+            <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin-bottom:4px">Key metrics</div>
+            <sc-for list="{{ cd.metrics }}" as="m" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--line2)">
+                <div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--txt);font-weight:500">{{ m.label }}</div><div style="font-size:10px;color:var(--txt3);font-family:var(--mono);margin-top:3px">{{ m.source }}</div></div>
+                <svg width="60" height="22" viewBox="0 0 60 22" style="flex:none"><path d="{{ m.spark }}" fill="none" stroke="{{ m.color }}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>
+                <div style="text-align:right;min-width:66px"><div style="font-family:var(--mono);font-size:13px;color:var(--txt);font-weight:500">{{ m.value }}</div><div style="font-family:var(--mono);font-size:10.5px;color:{{ m.color }};margin-top:2px">{{ m.delta }}</div></div>
+                <span style="flex:none;width:7px;height:7px;border-radius:50%;background:{{ m.color }}"></span>
+              </div>
+            </sc-for>
+
+            <sc-if value="{{ cd.hasRelations }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin:20px 0 8px">Top relations</div>
+              <sc-for list="{{ cd.relations }}" as="r" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
+                  <img src="{{ r.flag }}" style="width:19px;height:14px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(255,255,255,.09);flex:none"/>
+                  <span style="font-size:12.5px;color:var(--txt);flex:1;min-width:0">{{ r.name }}</span>
+                  <div style="width:76px;height:6px;border-radius:3px;position:relative;background:linear-gradient(90deg,#cc5b52,#d3a03f,#3f9d6b);opacity:.6;flex:none"><span style="position:absolute;top:-2px;left:{{ r.pos }};width:3px;height:10px;border-radius:2px;background:#e7eef4;transform:translateX(-50%);box-shadow:0 0 4px rgba(0,0,0,.6)"></span></div>
+                  <span style="font-family:var(--mono);font-size:11.5px;color:{{ r.color }};min-width:34px;text-align:right">{{ r.z }}</span>
+                </div>
+              </sc-for>
+            </sc-if>
+
+            <sc-if value="{{ cd.hasIncidents }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--txt3);font-weight:600;margin:22px 0 8px">Active incidents</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ cd.incidents }}" as="inc" hint-placeholder-count="2">
+                  <div onClick="{{ inc.open }}" style="cursor:pointer;padding:11px 12px;border:1px solid var(--line2);border-radius:8px;background:var(--panel2);display:flex;align-items:flex-start;gap:9px" style-hover="border-color:#33404d">
+                    <span style="flex:none;margin-top:3px;width:7px;height:7px;border-radius:50%;background:{{ inc.color }}"></span>
+                    <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:#dfe7ee;line-height:1.35">{{ inc.title }}</div><div style="font-size:10.5px;color:var(--txt3);font-family:var(--mono);margin-top:4px">{{ inc.metric }} · since {{ inc.since }}</div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ INCIDENT DETAIL MODAL ============ -->
+  <sc-if value="{{ md }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(6,9,12,.66);backdrop-filter:blur(3px);z-index:60;display:flex;align-items:center;justify-content:center;padding:30px;animation:gp-fade .18s ease">
+      <div onClick="{{ stop }}" style="width:600px;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:gp-modal .22s cubic-bezier(.2,.7,.3,1)">
+        <div style="padding:18px 20px 16px;border-bottom:1px solid var(--line2);display:flex;align-items:flex-start;gap:12px">
+          <span style="flex:none;margin-top:5px;width:10px;height:10px;border-radius:50%;background:{{ md.color }};box-shadow:0 0 0 4px {{ md.glow }}"></span>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px;font-weight:600;color:#eef3f8">{{ md.title }}</span>
+              <span style="font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;color:{{ md.badgeColor }};background:{{ md.badgeBg }}">{{ md.badgeLabel }}</span>
+            </div>
+            <div style="font-size:12px;color:var(--txt3);font-family:var(--mono);margin-top:5px">{{ md.sub }}</div>
+          </div>
+          <button onClick="{{ closeModal }}" style="flex:none;background:none;border:none;color:var(--txt3);cursor:pointer;padding:2px" style-hover="color:var(--txt)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+        </div>
+
+        <div style="padding:18px 20px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+            <span style="font-size:12px;color:var(--txt2);font-weight:600">{{ md.metricName }}</span>
+            <span style="font-size:11px;color:var(--txt3);font-family:var(--mono)">{{ md.metricSource }}</span>
+          </div>
+          <div style="border:1px solid var(--line2);border-radius:10px;background:var(--panel2);padding:14px 8px 8px">
+            <svg viewBox="0 0 560 240" style="width:100%;height:auto;display:block" data-om-raster="true">
+              <defs><linearGradient id="gp-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#d3a03f" stop-opacity=".26"/><stop offset="1" stop-color="#d3a03f" stop-opacity="0"/></linearGradient></defs>
+              <g font-family="IBM Plex Mono, monospace" font-size="10" fill="#5b646f">
+                <sc-for list="{{ md.yTicks }}" as="t" hint-placeholder-count="4">
+                  <line x1="44" y1="{{ t.y }}" x2="540" y2="{{ t.y }}" stroke="#1c2530"/>
+                  <text x="38" y="{{ t.ty }}" text-anchor="end">{{ t.label }}</text>
+                </sc-for>
+              </g>
+              <path d="{{ md.area }}" fill="url(#gp-area)"/>
+              <path d="{{ md.line }}" fill="none" stroke="#d3a03f" stroke-width="2" stroke-linejoin="round"/>
+              <line x1="44" y1="{{ md.thrY }}" x2="540" y2="{{ md.thrY }}" stroke="#cc5b52" stroke-width="1.3" stroke-dasharray="5 4"/>
+              <text x="540" y="{{ md.thrLabelY }}" text-anchor="end" font-family="IBM Plex Sans, sans-serif" font-size="10.5" font-weight="600" fill="#cc5b52">degraded threshold · z +1.5</text>
+              <circle cx="{{ md.breachX }}" cy="{{ md.breachY }}" r="4.5" fill="#d3a03f" stroke="#0e1116" stroke-width="1.5"/>
+              <line x1="{{ md.breachX }}" y1="{{ md.breachY }}" x2="{{ md.breachX }}" y2="212" stroke="#3d4954" stroke-width="1" stroke-dasharray="3 3"/>
+              <text x="{{ md.breachX }}" y="228" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#c8d1db">breach 09:40</text>
+              <g font-family="IBM Plex Mono, monospace" font-size="10" fill="#5b646f" text-anchor="middle">
+                <sc-for list="{{ md.xTicks }}" as="t" hint-placeholder-count="4"><text x="{{ t.x }}" y="212">{{ t.label }}</text></sc-for>
+              </g>
+            </svg>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <div style="flex:1;border:1px solid var(--line2);border-radius:8px;padding:10px 12px;background:var(--panel2)"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);font-weight:600">Current z-score</div><div style="font-family:var(--mono);font-size:17px;color:var(--deg);margin-top:4px;font-weight:500">{{ md.zNow }}</div></div>
+            <div style="flex:1;border:1px solid var(--line2);border-radius:8px;padding:10px 12px;background:var(--panel2)"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);font-weight:600">90d baseline μ±σ</div><div style="font-family:var(--mono);font-size:17px;color:var(--txt);margin-top:4px;font-weight:500">{{ md.baseline }}</div></div>
+            <div style="flex:1;border:1px solid var(--line2);border-radius:8px;padding:10px 12px;background:var(--panel2)"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--txt3);font-weight:600">Affected</div><div style="display:flex;align-items:center;gap:6px;margin-top:6px"><img src="{{ md.flag }}" style="width:20px;height:15px;border-radius:2px;object-fit:cover"/><span style="font-size:13px;color:var(--txt)">{{ md.country }}</span></div></div>
+          </div>
+          <p style="font-size:12.5px;line-height:1.6;color:var(--txt2);margin:16px 0 2px">{{ md.note }}</p>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;autoRotate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Globe&quot;},&quot;reduceMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Globe&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#3f9d6b&quot;,&quot;options&quot;:[&quot;#3f9d6b&quot;,&quot;#3d8fd6&quot;,&quot;#2f6fb0&quot;,&quot;#4aa8c9&quot;,&quot;#5a86e0&quot;,&quot;#c9974a&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
+class Component extends DCLogic {
+  state = {
+    domain: 'composite', view: 'default', selected: null, modal: null,
+    overlays: { relations: false, industry: false, air: false, sat: false, weather: false, sun: false }, focus: 'feed',
+    now: '', freshAgo: 14, feedFilter: 'all', searchOpen: false, searchQ: '',
+    ready: false, rot: 0, industry: 'semis', indView: 'players'
+  };
+
+  // ---------- lifecycle ----------
+  componentDidMount() {
+    this.lambda = 20; this.phi = -16; this.dragging = false;
+    this.applyAccent();
+    this._clock = setInterval(() => {
+      this.setState(s => ({ now: this.utc(), freshAgo: (s.freshAgo % 179) + 1 }));
+    }, 1000);
+    this.setState({ now: this.utc() });
+    this._wait = setInterval(() => {
+      const cv = document.getElementById('gp-canvas'), wr = document.getElementById('gp-wrap');
+      if (window.d3 && window.topojson && cv && wr && wr.clientWidth > 0) {
+        clearInterval(this._wait);
+        this.wrap = wr; this.attachCanvas(cv); this.initGlobe();
+      }
+    }, 80);
+  }
+  componentDidUpdate(prevProps) {
+    if (prevProps !== this.props) this.applyAccent();
+    if (this.ctx) { try { this.render3d(); } catch (e) {} }
+  }
+  componentWillUnmount() {
+    cancelAnimationFrame(this._raf); clearInterval(this._clock); clearInterval(this._wait);
+    if (this._ro) this._ro.disconnect();
+  }
+  applyAccent() {
+    const a = this.props.accent || '#3f9d6b';
+    try { document.documentElement.style.setProperty('--em', a); document.documentElement.style.setProperty('--op', a); } catch (e) {}
+    this.emerald = a;
+  }
+
+  // ---------- helpers ----------
+  utc() { return new Date().toISOString().slice(11, 19); }
+  hexA(h, a) {
+    const n = h.replace('#', ''); const r = parseInt(n.slice(0,2),16), g = parseInt(n.slice(2,4),16), b = parseInt(n.slice(4,6),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  col(s) { return { operational: this.emerald || '#3f9d6b', degraded: '#d3a03f', disrupted: '#cc5b52', stale: '#6b7480' }[s] || '#6b7480'; }
+  stateLabel(s) { return { operational: 'Operational', degraded: 'Degraded', disrupted: 'Disrupted', stale: 'Stale' }[s] || 'Unknown'; }
+  hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
+  spark(vals, w = 60, h = 22, p = 3) {
+    if (!vals || !vals.length) return '';
+    const mn = Math.min(...vals), mx = Math.max(...vals), r = (mx - mn) || 1, n = vals.length;
+    return vals.map((v, i) => { const x = p + (w - 2 * p) * i / (n - 1); const y = h - p - (h - 2 * p) * (v - mn) / r; return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1); }).join(' ');
+  }
+  nice(name) {
+    return ({ 'United States of America': 'United States', 'Dem. Rep. Korea': 'North Korea', 'Bosnia and Herz.': 'Bosnia & Herz.', 'Dominican Rep.': 'Dominican Rep.', 'Czechia': 'Czechia', 'S. Sudan': 'South Sudan', 'Central African Rep.': 'Central African Rep.', 'Eq. Guinea': 'Eq. Guinea' })[name] || name;
+  }
+
+  // ---------- static reference data ----------
+  get iso() {
+    return { 'United States of America': 'us', 'China': 'cn', 'Japan': 'jp', 'United Kingdom': 'gb', 'South Korea': 'kr', 'Russia': 'ru', 'Ukraine': 'ua', 'Argentina': 'ar', 'Brazil': 'br', 'India': 'in', 'Pakistan': 'pk', 'Israel': 'il', 'Iran': 'ir', 'Germany': 'de', 'France': 'fr', 'Saudi Arabia': 'sa', 'Australia': 'au', 'Mexico': 'mx', 'Switzerland': 'ch', 'Eritrea': 'er', 'Turkey': 'tr', 'Canada': 'ca', 'Italy': 'it', 'Spain': 'es', 'Taiwan': 'tw' };
+  }
+  flag(name) { const c = this.iso[name]; return c ? `https://flagcdn.com/40x30/${c}.png` : null; }
+  flagIso(c) { return `https://flagcdn.com/40x30/${c}.png`; }
+  // [a, b, tone, importerIdx, imbalance] — importerIdx = which of a/b is the LARGER importer
+  // (goods flow animates toward that country); imbalance 0..1 = how lopsided the trade balance is.
+  get relPairs() {
+    return [
+      ['United States of America', 'China', 'amber', 0, 0.82], ['United States of America', 'United Kingdom', 'warm', 0, 0.24],
+      ['Japan', 'United States of America', 'warm', 1, 0.55], ['Japan', 'China', 'amber', 0, 0.4], ['Japan', 'South Korea', 'warm', 0, 0.3],
+      ['Russia', 'Ukraine', 'hostile', 0, 0.5], ['Argentina', 'Brazil', 'warm', 0, 0.46], ['India', 'Pakistan', 'hostile', 1, 0.35],
+      ['Israel', 'Iran', 'hostile', 0, 0.2], ['Germany', 'France', 'warm', 1, 0.42], ['United States of America', 'Russia', 'amber', 0, 0.3],
+      ['China', 'India', 'amber', 1, 0.7], ['Saudi Arabia', 'Iran', 'amber', 0, 0.25], ['Australia', 'Japan', 'warm', 1, 0.6],
+      ['United States of America', 'Mexico', 'warm', 0, 0.66], ['China', 'Russia', 'warm', 0, 0.58], ['United Kingdom', 'France', 'warm', 0, 0.28],
+      ['United States of America', 'Germany', 'warm', 0, 0.62], ['Iran', 'United States of America', 'hostile', 0, 0.2], ['Brazil', 'China', 'warm', 1, 0.64]
+    ];
+  }
+  toneCol(t) { return { warm: this.emerald || '#3f9d6b', amber: '#d3a03f', hostile: '#cc5b52' }[t]; }
+
+  // ---------- globe ----------
+  attachCanvas(el) {
+    if (!el || el === this.canvas) return;
+    this.canvas = el;
+    el.addEventListener('pointerdown', e => this.onDown(e));
+    el.addEventListener('pointermove', e => this.onMove(e));
+    window.addEventListener('pointerup', e => this.onUp(e));
+  }
+  makeHatch() {
+    const c = document.createElement('canvas'); c.width = 6; c.height = 6;
+    const x = c.getContext('2d'); x.strokeStyle = '#5b646f'; x.lineWidth = 1.4;
+    x.beginPath(); x.moveTo(0, 6); x.lineTo(6, 0); x.moveTo(-2, 2); x.lineTo(2, -2); x.moveTo(4, 8); x.lineTo(8, 4); x.stroke();
+    return this.canvas.getContext('2d').createPattern(c, 'repeat');
+  }
+  async initGlobe() {
+    try {
+      const topo = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(r => r.json());
+      this.features = window.topojson.feature(topo, topo.objects.countries).features;
+      this.borders = window.topojson.mesh(topo, topo.objects.countries, (a, b) => a !== b);
+      this.sphere = { type: 'Sphere' };
+      this.graticule = window.d3.geoGraticule()();
+      this.centroids = {};
+      this.features.forEach(f => { if (f.properties && f.properties.name) this.centroids[f.properties.name] = window.d3.geoCentroid(f); });
+      this.assignStates();
+      this.setupCanvas();
+      this.hatch = this.makeHatch();
+      this.setState({ ready: true });
+      this.render3d();
+      this.loop();
+    } catch (e) { this.loadErr = String(e); }
+  }
+  assignStates() {
+    const cur = this.curated();
+    this.domains = {};
+    this.features.forEach(f => {
+      const nm = f.properties && f.properties.name; if (!nm) return;
+      if (cur[nm]) { this.domains[nm] = cur[nm].dom; return; }
+      const h = this.hash(nm), h2 = this.hash(nm + 'x'), h3 = this.hash(nm + 'y');
+      const pick = (v) => v > 0.93 ? 'disrupted' : v > 0.74 ? 'degraded' : 'operational';
+      const stale = this.hash(nm + 'z') > 0.955;
+      let economy = stale ? 'stale' : pick(h), markets = stale ? 'stale' : pick(h2), relations = pick(h3), conflict = this.hash(nm + 'c') > 0.9 ? 'degraded' : 'operational';
+      const order = { operational: 0, degraded: 1, disrupted: 2, stale: 3 };
+      const composite = stale ? 'stale' : [economy, markets, relations].sort((a, b) => order[b] - order[a])[0];
+      this.domains[nm] = { composite, economy, markets, relations, conflict };
+    });
+  }
+  setupCanvas() {
+    const resize = () => {
+      if (!this.wrap || !this.canvas) return;
+      const w = this.wrap.clientWidth, h = this.wrap.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this.w = w; this.h = h;
+      this.canvas.width = w * dpr; this.canvas.height = h * dpr;
+      this.ctx = this.canvas.getContext('2d'); this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const R = Math.min(w, h) * 0.42;
+      this.projection = window.d3.geoOrthographic().scale(R).translate([w / 2, h * 0.5]).clipAngle(90).rotate([this.lambda, this.phi]);
+      this.path = window.d3.geoPath(this.projection, this.ctx);
+    };
+    resize();
+    if (this.wrap) { this._ro = new ResizeObserver(resize); this._ro.observe(this.wrap); }
+  }
+  onDown(e) { this.dragging = true; this.moved = 0; this.lx = e.clientX; this.ly = e.clientY; this.canvas.style.cursor = 'grabbing'; }
+  onMove(e) {
+    if (!this.dragging) return;
+    const dx = e.clientX - this.lx, dy = e.clientY - this.ly;
+    this.moved += Math.abs(dx) + Math.abs(dy);
+    this.lambda += dx * 0.28; this.phi = Math.max(-72, Math.min(72, this.phi - dy * 0.28));
+    this.lx = e.clientX; this.ly = e.clientY;
+  }
+  onUp(e) {
+    if (!this.dragging) return;
+    this.dragging = false; if (this.canvas) this.canvas.style.cursor = 'grab';
+    if (this.moved < 5 && this.projection) {
+      const rect = this.canvas.getBoundingClientRect();
+      const inv = this.projection.invert([e.clientX - rect.left, e.clientY - rect.top]);
+      if (inv) {
+        const f = this.features.find(ft => window.d3.geoContains(ft, inv));
+        if (f && f.properties && f.properties.name) this.select(f.properties.name);
+        else this.setState({ selected: null });
+      }
+    }
+  }
+  visible(pt, center) { return window.d3.geoDistance(pt, center) < Math.PI / 2 - 0.01; }
+  drawArc(a, b, color, alpha, width, t) {
+    const ctx = this.ctx, proj = this.projection, interp = window.d3.geoInterpolate(a, b), rot = proj.rotate(), center = [-rot[0], -rot[1]];
+    const cx = this.w / 2, cy = this.h * 0.5, R = proj.scale(), hgt = Math.min(0.34, window.d3.geoDistance(a, b) * 0.17);
+    const N = 56; let started = false;
+    ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = width; ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const f = i / N, p = interp(f);
+      const s = proj(p), lift = 1 + hgt * Math.sin(Math.PI * f); const x = cx + (s[0] - cx) * lift, y = cy + (s[1] - cy) * lift;
+      const show = this.visible(p, center) || Math.hypot(x - cx, y - cy) > R;
+      if (show) { if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y); }
+      else started = false;
+    }
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  // animated particles flowing along a great-circle arc toward the destination (b when dirToB)
+  drawFlow(a, b, color, dirToB, t, count, speed) {
+    if (this.props.reduceMotion) return;
+    const ctx = this.ctx, proj = this.projection, interp = window.d3.geoInterpolate(a, b), rot = proj.rotate(), center = [-rot[0], -rot[1]];
+    const cx = this.w / 2, cy = this.h * 0.5, R = proj.scale(), hgt = Math.min(0.34, window.d3.geoDistance(a, b) * 0.17);
+    for (let k = 0; k < count; k++) {
+      let ph = ((t * speed) + k / count) % 1;
+      const f = dirToB ? ph : 1 - ph;
+      const p = interp(f);
+      const s = proj(p), lift = 1 + hgt * Math.sin(Math.PI * f);
+      const x = cx + (s[0] - cx) * lift, y = cy + (s[1] - cy) * lift;
+      if (!this.visible(p, center) && Math.hypot(x - cx, y - cy) <= R) continue;
+      const fade = Math.sin(Math.PI * ph);
+      ctx.beginPath(); ctx.arc(x, y, 1.9, 0, 2 * Math.PI);
+      ctx.fillStyle = color; ctx.globalAlpha = 0.85 * fade; ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // a labelled node marker at a country's centroid (r scales with importance)
+  drawNode(pt, r, fill, ring, label, t) {
+    const proj = this.projection, rot = proj.rotate(), center = [-rot[0], -rot[1]];
+    if (!this.visible(pt, center)) return null;
+    const ctx = this.ctx, xy = proj(pt);
+    const pulse = this.props.reduceMotion ? 0 : (2 + 1.6 * (0.5 + 0.5 * Math.sin(t * 2)));
+    ctx.beginPath(); ctx.arc(xy[0], xy[1], r + pulse, 0, 2 * Math.PI); ctx.fillStyle = fill; ctx.globalAlpha = 0.14; ctx.fill();
+    ctx.beginPath(); ctx.arc(xy[0], xy[1], r, 0, 2 * Math.PI); ctx.fillStyle = fill; ctx.globalAlpha = 0.92; ctx.fill();
+    ctx.lineWidth = 1.4; ctx.strokeStyle = ring || '#0e1116'; ctx.globalAlpha = 1; ctx.stroke();
+    if (label != null) { ctx.fillStyle = '#0b0e13'; ctx.font = '600 10px "IBM Plex Mono", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, xy[0], xy[1] + 0.5); }
+    return xy;
+  }
+  lerpHex(a, b, t) {
+    t = Math.max(0, Math.min(1, t));
+    const pa = a.replace('#', ''), pb = b.replace('#', '');
+    const r = Math.round(parseInt(pa.slice(0, 2), 16) + (parseInt(pb.slice(0, 2), 16) - parseInt(pa.slice(0, 2), 16)) * t);
+    const g = Math.round(parseInt(pa.slice(2, 4), 16) + (parseInt(pb.slice(2, 4), 16) - parseInt(pa.slice(2, 4), 16)) * t);
+    const bl = Math.round(parseInt(pa.slice(4, 6), 16) + (parseInt(pb.slice(4, 6), 16) - parseInt(pa.slice(4, 6), 16)) * t);
+    return 'rgb(' + r + ',' + g + ',' + bl + ')';
+  }
+  // ---------- industries ----------
+  industryList() {
+    if (this._ind) return this._ind;
+    this._ind = [
+      { id: 'semis', name: 'Semiconductors', desc: 'Leading-edge logic & memory',
+        players: [{ country: 'Taiwan', role: 'Leading-edge foundry', share: 0.68 }, { country: 'South Korea', role: 'Memory & fabs', share: 0.19 }, { country: 'China', role: 'Mature-node fabs', share: 0.16 }, { country: 'United States of America', role: 'Design & EDA', share: 0.12 }, { country: 'Japan', role: 'Materials & tools', share: 0.10 }],
+        chain: [{ country: 'Australia', stage: 'Silicon & rare earths', role: 'Extraction' }, { country: 'Japan', stage: 'Photoresist & wafers', role: 'Materials' }, { country: 'Taiwan', stage: 'Leading-edge fab', role: 'Fabrication' }, { country: 'China', stage: 'Assembly & test', role: 'Assembly' }, { country: 'United States of America', stage: 'Device makers', role: 'Market' }] },
+      { id: 'battery', name: 'EV batteries', desc: 'Lithium-ion cells & packs',
+        players: [{ country: 'China', role: 'Cells & cathode', share: 0.74 }, { country: 'South Korea', role: 'Cell production', share: 0.13 }, { country: 'Australia', role: 'Lithium mining', share: 0.10 }, { country: 'Japan', role: 'Cells & materials', share: 0.06 }, { country: 'Argentina', role: 'Lithium brine', share: 0.05 }],
+        chain: [{ country: 'Argentina', stage: 'Lithium brine', role: 'Extraction' }, { country: 'China', stage: 'Cathode refining', role: 'Processing' }, { country: 'South Korea', stage: 'Cell production', role: 'Manufacturing' }, { country: 'Germany', stage: 'Pack & EV assembly', role: 'Integration' }, { country: 'United States of America', stage: 'EV market', role: 'Market' }] },
+      { id: 'pharma', name: 'Pharmaceuticals', desc: 'Small-molecule drugs & APIs',
+        players: [{ country: 'United States of America', role: 'Innovation & R&D', share: 0.42 }, { country: 'India', role: 'Generics & API', share: 0.20 }, { country: 'China', role: 'API synthesis', share: 0.17 }, { country: 'Switzerland', role: 'Originators', share: 0.13 }, { country: 'Germany', role: 'Originators', share: 0.09 }],
+        chain: [{ country: 'China', stage: 'API synthesis', role: 'Base inputs' }, { country: 'India', stage: 'Formulation', role: 'Manufacturing' }, { country: 'Switzerland', stage: 'R&D & branding', role: 'Value-add' }, { country: 'United States of America', stage: 'Patient market', role: 'Market' }] },
+      { id: 'oil', name: 'Oil & gas', desc: 'Crude, refining & petrochem',
+        players: [{ country: 'United States of America', role: 'Crude & LNG', share: 0.20 }, { country: 'China', role: 'Refining & demand', share: 0.16 }, { country: 'Saudi Arabia', role: 'Crude export', share: 0.15 }, { country: 'Russia', role: 'Crude & gas', share: 0.12 }, { country: 'India', role: 'Refining', share: 0.06 }],
+        chain: [{ country: 'Saudi Arabia', stage: 'Crude extraction', role: 'Extraction' }, { country: 'India', stage: 'Refining', role: 'Processing' }, { country: 'China', stage: 'Petrochemicals', role: 'Manufacturing' }, { country: 'Japan', stage: 'Import market', role: 'Market' }] },
+      { id: 'coffee', name: 'Coffee', desc: 'Green bean to retail cup',
+        players: [{ country: 'Brazil', role: 'Green bean', share: 0.35 }, { country: 'United States of America', role: 'Consumption', share: 0.18 }, { country: 'Switzerland', role: 'Trading & brands', share: 0.12 }, { country: 'Italy', role: 'Roasting', share: 0.10 }, { country: 'Germany', role: 'Roast & re-export', share: 0.09 }],
+        chain: [{ country: 'Brazil', stage: 'Bean cultivation', role: 'Extraction' }, { country: 'Italy', stage: 'Roasting', role: 'Processing' }, { country: 'Switzerland', stage: 'Branding & trade', role: 'Value-add' }, { country: 'United Kingdom', stage: 'Retail market', role: 'Market' }] }
+    ];
+    return this._ind;
+  }
+  industry() { const l = this.industryList(); return l.find(x => x.id === this.state.industry) || l[0]; }
+  // ---------- air traffic ----------
+  flightRoutes() {
+    if (this._flights) return this._flights;
+    const H = { NYC: [-73.8, 40.6], LAX: [-118.4, 33.9], SFO: [-122.4, 37.6], ORD: [-87.9, 42.0], YYZ: [-79.6, 43.7], MEX: [-99.1, 19.4], GRU: [-46.5, -23.4], LHR: [-0.5, 51.5], CDG: [2.5, 49.0], FRA: [8.6, 50.0], AMS: [4.8, 52.3], MAD: [-3.6, 40.5], IST: [28.8, 41.0], SVO: [37.4, 55.9], DXB: [55.4, 25.3], DOH: [51.6, 25.3], DEL: [77.1, 28.6], BOM: [72.9, 19.1], SIN: [103.9, 1.4], HKG: [113.9, 22.3], PEK: [116.6, 40.1], PVG: [121.8, 31.1], NRT: [140.4, 35.8], ICN: [126.5, 37.5], BKK: [100.7, 13.7], SYD: [151.2, -33.9], JNB: [28.2, -26.1], CPT: [18.6, -33.9] };
+    const pairs = [['NYC', 'LHR'], ['NYC', 'CDG'], ['LAX', 'NRT'], ['SFO', 'ICN'], ['ORD', 'FRA'], ['LHR', 'JFK'], ['LHR', 'DXB'], ['LHR', 'SIN'], ['DXB', 'SIN'], ['DXB', 'DEL'], ['DXB', 'LHR'], ['DOH', 'BKK'], ['FRA', 'PEK'], ['CDG', 'GRU'], ['AMS', 'SYD'], ['SIN', 'SYD'], ['HKG', 'LAX'], ['PVG', 'SFO'], ['NRT', 'SIN'], ['ICN', 'NYC'], ['DEL', 'DXB'], ['BOM', 'LHR'], ['IST', 'FRA'], ['IST', 'DEL'], ['SVO', 'PEK'], ['MEX', 'MAD'], ['GRU', 'JNB'], ['JNB', 'CPT'], ['SYD', 'LAX'], ['BKK', 'HKG'], ['PEK', 'HKG'], ['MAD', 'GRU'], ['YYZ', 'LHR'], ['AMS', 'DXB']];
+    this._flights = pairs.map(p => [H[p[0]], H[p[1] === 'JFK' ? 'NYC' : p[1]]]).filter(p => p[0] && p[1]);
+    return this._flights;
+  }
+  drawAir(t) {
+    this.flightRoutes().forEach((r, i) => {
+      this.drawArc(r[0], r[1], 'rgba(176,200,224,1)', 0.15, 0.7, t);
+      this.drawFlow(r[0], r[1], '#e2ecf6', true, t, 2, 0.045 + (i % 6) * 0.006);
+    });
+  }
+  // ---------- satellites ----------
+  orbits() {
+    return [
+      { inc: 0.925, node: 20, alt: 1.10, count: 16, speed: 0.5, color: 'rgba(120,190,220,0.5)' },
+      { inc: 1.57, node: 120, alt: 1.16, count: 11, speed: 0.42, color: 'rgba(150,175,215,0.42)' },
+      { inc: 0.49, node: 250, alt: 1.08, count: 13, speed: 0.56, color: 'rgba(110,200,200,0.42)' },
+      { inc: 1.13, node: 305, alt: 1.22, count: 9, speed: 0.36, color: 'rgba(140,180,220,0.38)' },
+      { inc: 0.02, node: 0, alt: 1.36, count: 6, speed: 0.16, color: 'rgba(205,180,130,0.42)' }
+    ];
+  }
+  drawSats(t) {
+    const ctx = this.ctx, proj = this.projection, rot = proj.rotate(), center = [-rot[0], -rot[1]];
+    const cx = this.w / 2, cy = this.h * 0.5, R = proj.scale();
+    const lift = (ll, alt) => { const s = proj(ll); return [cx + (s[0] - cx) * alt, cy + (s[1] - cy) * alt]; };
+    const shown = (ll, p) => this.visible(ll, center) || Math.hypot(p[0] - cx, p[1] - cy) > R;
+    const track = (o, th) => { const lat = Math.asin(Math.sin(o.inc) * Math.sin(th)) * 180 / Math.PI; const lon = o.node + Math.atan2(Math.cos(o.inc) * Math.sin(th), Math.cos(th)) * 180 / Math.PI; return [lon, lat]; };
+    this.orbits().forEach(o => {
+      ctx.beginPath(); let started = false;
+      for (let k = 0; k <= 128; k++) { const ll = track(o, k / 128 * 2 * Math.PI); const p = lift(ll, o.alt); if (shown(ll, p)) { if (!started) { ctx.moveTo(p[0], p[1]); started = true; } else ctx.lineTo(p[0], p[1]); } else started = false; }
+      ctx.strokeStyle = o.color; ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.stroke();
+      for (let s = 0; s < o.count; s++) {
+        const ll = track(o, t * o.speed + s / o.count * 2 * Math.PI);
+        const p = lift(ll, o.alt);
+        if (!shown(ll, p)) continue;
+        ctx.beginPath(); ctx.arc(p[0], p[1], 1.7, 0, 2 * Math.PI); ctx.fillStyle = '#eaf4fb'; ctx.globalAlpha = 0.95; ctx.fill();
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
+  // ---------- meteorology ----------
+  tempColor(ll, seed) {
+    const lat = ll ? ll[1] : 0;
+    const temp = 31 - Math.abs(lat) * 0.72 + (this.hash(seed + 'w') - 0.5) * 9;
+    const stops = [[-12, '#3f6fc4'], [4, '#4aa8c9'], [17, '#57ab73'], [25, '#cbb043'], [33, '#d1863f'], [42, '#cc5b52']];
+    if (temp <= stops[0][0]) return stops[0][1];
+    for (let i = 1; i < stops.length; i++) { if (temp <= stops[i][0]) return this.lerpHex(stops[i - 1][1], stops[i][1], (temp - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0])); }
+    return stops[stops.length - 1][1];
+  }
+  storms() {
+    return [
+      { lon: -72, lat: 22, name: 'Hurricane · Caribbean', cat: 'Cat 3', spin: 1 },
+      { lon: 129, lat: 19, name: 'Typhoon · W Pacific', cat: 'Cat 4', spin: 1 },
+      { lon: -28, lat: 53, name: 'N-Atlantic low', cat: '968 hPa', spin: 1 },
+      { lon: 88, lat: 15, name: 'Bay of Bengal', cat: 'Cat 1', spin: 1 },
+      { lon: 156, lat: -17, name: 'Coral Sea', cat: 'Cat 2', spin: -1 }
+    ];
+  }
+  drawWeather(t) {
+    const ctx = this.ctx, proj = this.projection, rot = proj.rotate(), center = [-rot[0], -rot[1]];
+    this.storms().forEach((s, si) => {
+      const ll = [s.lon, s.lat]; if (!this.visible(ll, center)) return;
+      const c = proj(ll), spin = t * 0.7 * s.spin + si;
+      ctx.save(); ctx.translate(c[0], c[1]); ctx.rotate(spin);
+      ctx.strokeStyle = 'rgba(196,218,238,0.6)'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+      for (let arm = 0; arm < 2; arm++) {
+        ctx.beginPath();
+        for (let a = 0; a <= 60; a++) { const ang = a / 60 * Math.PI * 2.4 + arm * Math.PI; const rr = 1.6 + a / 60 * 16; const x = Math.cos(ang) * rr, y = Math.sin(ang) * rr; if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(0, 0, 2.1, 0, 2 * Math.PI); ctx.fillStyle = 'rgba(235,243,251,0.95)'; ctx.fill();
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+  }
+  // ---------- day / night ----------
+  subsolar() {
+    const now = new Date();
+    const utcH = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+    let slon = -(utcH - 12) * 15;
+    slon = ((slon + 540) % 360) - 180;
+    const start = Date.UTC(now.getUTCFullYear(), 0, 0);
+    const day = (now - start) / 86400000;
+    const slat = -23.44 * Math.cos((2 * Math.PI / 365) * (day + 10));
+    return { slon, slat };
+  }
+  drawSun() {
+    const ctx = this.ctx, proj = this.projection, path = this.path, rot = proj.rotate(), center = [-rot[0], -rot[1]];
+    const { slon, slat } = this.subsolar();
+    const anti = [((slon + 180 + 540) % 360) - 180, -slat];
+    // timezone meridians (every 15° = 1 hour)
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 0.6;
+    for (let lon = -180; lon < 180; lon += 15) {
+      const ls = { type: 'LineString', coordinates: [] };
+      for (let lat = -82; lat <= 82; lat += 4) ls.coordinates.push([lon, lat]);
+      ctx.beginPath(); path(ls); ctx.stroke();
+    }
+    // night hemisphere
+    const night = window.d3.geoCircle().center(anti).radius(90)();
+    ctx.beginPath(); path(night); ctx.fillStyle = 'rgba(5,8,15,0.62)'; ctx.fill();
+    // twilight band
+    const dusk = window.d3.geoCircle().center(anti).radius(84)();
+    ctx.beginPath(); path(dusk); ctx.strokeStyle = 'rgba(120,150,195,0.32)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); path(night); ctx.strokeStyle = 'rgba(150,175,215,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+  loop() {
+    const draw = () => {
+      const auto = (this.props.autoRotate ?? true) && !this.props.reduceMotion && !this.dragging && !this.state.selected && !this.state.overlays.industry;
+      if (auto) this.lambda += 0.05;
+      try { this.render3d(); } catch (e) {}
+      this._raf = requestAnimationFrame(draw);
+    };
+    this._raf = requestAnimationFrame(draw);
+  }
+  render3d() {
+    const ctx = this.ctx, proj = this.projection, path = this.path;
+    if (!ctx || !proj) return;
+    const w = this.w, h = this.h; ctx.clearRect(0, 0, w, h);
+    proj.rotate([this.lambda, this.phi]);
+    const cx = w / 2, cy = h * 0.5, R = proj.scale();
+    const { selected } = this.state;
+    const domain = this.state.domain || 'composite';
+    const ov = this.state.overlays;
+
+    // atmosphere glow
+    const g = ctx.createRadialGradient(cx, cy, R * 0.86, cx, cy, R * 1.22);
+    g.addColorStop(0, 'rgba(70,150,175,0)'); g.addColorStop(0.42, 'rgba(72,158,185,0.16)'); g.addColorStop(1, 'rgba(72,158,185,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+    // ocean
+    ctx.beginPath(); path(this.sphere);
+    const og = ctx.createRadialGradient(cx - R * 0.2, cy - R * 0.25, R * 0.1, cx, cy, R);
+    og.addColorStop(0, '#131c26'); og.addColorStop(1, '#0a0f15');
+    ctx.fillStyle = og; ctx.fill();
+
+    // graticule
+    ctx.beginPath(); path(this.graticule); ctx.strokeStyle = 'rgba(255,255,255,0.045)'; ctx.lineWidth = 0.5; ctx.stroke();
+
+    // linked-country set for the selected country
+    const linkTone = {};
+    if (selected) {
+      this.relPairs.forEach(p => {
+        if (p[0] === selected) linkTone[p[1]] = p[2];
+        else if (p[1] === selected) linkTone[p[0]] = p[2];
+      });
+    }
+    // countries — neutral by default; coloured by the chosen health domain only when selected
+    this.features.forEach(f => {
+      const nm = f.properties && f.properties.name; if (!nm) return;
+      const dom = this.domains[nm] || {};
+      const linked = selected && linkTone[nm];
+      let fill, alpha = 0.92;
+      if (selected) {
+        if (nm === selected || linked) { fill = this.col(dom[domain] || dom.composite); alpha = nm === selected ? 1 : 0.86; }
+        else { fill = '#151d26'; alpha = 0.9; }
+      } else if (ov.weather) {
+        fill = this.tempColor(this.centroids[nm], nm); alpha = 0.58;
+      } else {
+        if (dom.composite === 'stale') fill = null; else fill = '#1c242e';
+      }
+      ctx.beginPath(); path(f);
+      if (fill === null) { ctx.fillStyle = '#20262e'; ctx.fill(); ctx.fillStyle = this.hatch; ctx.fill(); }
+      else { ctx.fillStyle = fill; ctx.globalAlpha = alpha; ctx.fill(); ctx.globalAlpha = 1; }
+    });
+    // borders
+    ctx.beginPath(); path(this.borders); ctx.strokeStyle = 'rgba(9,13,17,0.85)'; ctx.lineWidth = 0.55; ctx.stroke();
+
+    // linked-country outlines (tone colored) + selected outline (white)
+    if (selected) {
+      this.features.forEach(f => {
+        const nm = f.properties && f.properties.name;
+        if (nm && linkTone[nm]) {
+          ctx.beginPath(); path(f);
+          ctx.strokeStyle = this.toneCol(linkTone[nm]); ctx.lineWidth = 1.3; ctx.globalAlpha = 0.95; ctx.stroke(); ctx.globalAlpha = 1;
+        }
+      });
+      const f = this.features.find(x => x.properties && x.properties.name === selected);
+      if (f) { ctx.beginPath(); path(f); ctx.strokeStyle = '#eef3f8'; ctx.lineWidth = 1.6; ctx.stroke(); }
+    }
+
+    // ---- stacked overlays (all render together; each toggled independently) ----
+    const t = performance.now() / 1000;
+    if (ov.sun) this.drawSun();
+    if (ov.weather) this.drawWeather(t);
+    // relation arcs: full set when Relations is on; the selected country's links always show
+    let pairs = null;
+    if (ov.relations) pairs = this.relPairs;
+    else if (selected) pairs = this.relPairs.filter(p => p[0] === selected || p[1] === selected);
+    if (pairs) pairs.forEach((p, i) => {
+      const a = this.centroids[p[0]], b = this.centroids[p[1]]; if (!a || !b) return;
+      const pulse = this.props.reduceMotion ? 1 : (0.72 + 0.28 * Math.sin(t * 1.5 + i * 0.7));
+      this.drawArc(a, b, this.toneCol(p[2]), 0.82 * pulse, 1.9, t);
+      this.drawFlow(a, b, this.toneCol(p[2]), p[3] === 1, t, 3 + Math.round((p[4] || 0.4) * 5), 0.13 + (p[4] || 0.4) * 0.13);
+    });
+    // industry supply chain / key players
+    if (ov.industry) {
+      const ind = this.industry();
+      if ((this.state.indView || 'players') === 'chain') {
+        for (let i = 0; i < ind.chain.length - 1; i++) {
+          const a = this.centroids[ind.chain[i].country], b = this.centroids[ind.chain[i + 1].country];
+          if (!a || !b) continue;
+          this.drawArc(a, b, '#5fb0cc', 0.55, 1.6, t);
+          this.drawFlow(a, b, '#9adcf0', true, t, 5, 0.2);
+        }
+        ind.chain.forEach((sg, i) => {
+          const c = this.centroids[sg.country]; if (!c) return;
+          const col = this.lerpHex('#c9974a', this.emerald || '#3f9d6b', ind.chain.length > 1 ? i / (ind.chain.length - 1) : 0);
+          this.drawNode(c, 11, col, '#0b0e13', String(i + 1), t);
+        });
+      } else {
+        ind.players.slice().sort((a, b) => b.share - a.share).forEach((p, i) => {
+          const c = this.centroids[p.country]; if (!c) return;
+          this.drawNode(c, 6 + p.share * 16, '#4aa8c9', '#dff2f8', String(i + 1), t);
+        });
+      }
+    }
+    if (ov.air) this.drawAir(t);
+    if (ov.sat) this.drawSats(t);
+
+    // sphere rim
+    ctx.beginPath(); path(this.sphere); ctx.strokeStyle = this.hexA(this.emerald || '#3f9d6b', 0.35); ctx.lineWidth = 1; ctx.stroke();
+
+    // selected-country popup (positioned imperatively so it tracks rotation/drag)
+    const pop = document.getElementById('gp-popup');
+    if (pop) {
+      const cc = selected && this.centroids[selected];
+      if (cc && this.visible(cc, [-this.lambda, -this.phi])) {
+        const xy = proj(cc);
+        const off = 36;
+        const left = Math.max(118, Math.min(w - 118, xy[0] + off));
+        const below = xy[1] < 150;
+        pop.style.left = left + 'px';
+        pop.style.top = xy[1] + 'px';
+        pop.style.transform = below ? 'translate(-50%, 18px)' : 'translate(-50%, calc(-100% - 16px))';
+        pop.style.opacity = '1';
+        const arrowLeft = 'calc(50% - ' + (left - xy[0]) + 'px)';
+        const ad = document.getElementById('gp-arrow-d'), au = document.getElementById('gp-arrow-u');
+        if (ad) { ad.style.display = below ? 'none' : 'block'; ad.style.left = arrowLeft; }
+        if (au) { au.style.display = below ? 'block' : 'none'; au.style.left = arrowLeft; }
+      } else { pop.style.opacity = '0'; }
+    }
+  }
+
+  // ---------- interactions ----------
+  select(name) {
+    const c = this.centroids && this.centroids[name];
+    if (c) { this.lambda = -c[0]; this.phi = Math.max(-70, Math.min(70, -c[1])); }
+    this.setState({ selected: name, view: 'default', searchOpen: false, modal: null });
+  }
+  closeCountry() { this.setState({ selected: null }); }
+  setDomain(d) { this.setState({ domain: d, focus: 'feed' }); }
+  toggleOverlay(k) {
+    this.setState(s => {
+      const overlays = Object.assign({}, s.overlays, { [k]: !s.overlays[k] });
+      const focus = overlays[k] ? k : (s.focus === k ? 'feed' : s.focus);
+      return { overlays, focus };
+    });
+  }
+  setIndustry(id) { this.setState({ industry: id }); }
+  setIndView(v) { this.setState({ indView: v }); }
+  openMethod() { this.setState({ view: 'methodology', searchOpen: false }); }
+  goHome() { this.setState({ view: 'default' }); }
+  toggleSearch() { this.setState(s => ({ searchOpen: !s.searchOpen, view: 'default' })); }
+  onSearch(e) { this.setState({ searchQ: e.target.value }); }
+  openModal(id) { this.setState({ modal: id }); }
+  closeModal() { this.setState({ modal: null }); }
+  stop(e) { if (e) e.stopPropagation(); }
+
+  // ---------- curated country data ----------
+  curated() {
+    if (this._cur) return this._cur;
+    const M = (label, value, delta, state, source, vals) => ({ label, value, delta, state, source, vals });
+    const c = {};
+    c['Japan'] = {
+      dom: { composite: 'degraded', economy: 'operational', markets: 'degraded', relations: 'operational', conflict: 'operational' },
+      region: 'East Asia · JPY · G7', compAge: 'GDELT · 3 min',
+      metrics: [
+        M('Nikkei 225', '38,204', '−2.8% · z −1.6', 'degraded', 'TSE · 3 min', [43, 42.5, 43.2, 41.8, 41, 42, 39.5, 38.6, 38.2]),
+        M('10Y JGB yield', '0.98%', '+4 bp', 'operational', 'MOF · 6 min', [0.9, 0.91, 0.93, 0.94, 0.95, 0.96, 0.98]),
+        M('JPY / USD', '157.8', '−0.6%', 'degraded', 'BOJ · 1 min', [154, 155, 155.4, 156.1, 156.8, 157.2, 157.8]),
+        M('Inflation CPI', '2.8% YoY', '+0.1 pp', 'operational', 'e-Stat · 2 d', [2.6, 2.7, 2.7, 2.8, 2.8, 2.8]),
+        M('GDP growth', '0.9% QoQ', 'stable', 'operational', 'ESRI · 34 d', [0.6, 0.7, 0.8, 0.9, 0.9]),
+        M('Debt / GDP', '255%', 'structural', 'operational', 'IMF · 90 d', [251, 252, 253, 254, 255])
+      ],
+      relations: [
+        { n: 'United States', iso: 'us', z: 0.8, tone: 'warm' }, { n: 'South Korea', iso: 'kr', z: 0.3, tone: 'warm' },
+        { n: 'Australia', iso: 'au', z: 0.6, tone: 'warm' }, { n: 'China', iso: 'cn', z: -0.9, tone: 'amber' },
+        { n: 'Russia', iso: 'ru', z: -0.7, tone: 'amber' }
+      ],
+      incidents: ['jpvol', 'nikkei']
+    };
+    c['Argentina'] = {
+      dom: { composite: 'disrupted', economy: 'disrupted', markets: 'degraded', relations: 'operational', conflict: 'operational' },
+      region: 'South America · ARS', compAge: 'INDEC · 6 d',
+      metrics: [
+        M('Merval index', '1,842,300', '+1.2%', 'degraded', 'BYMA · 4 min', [1.62, 1.68, 1.71, 1.77, 1.79, 1.82, 1.84]),
+        M('10Y USD bond', '24.6%', '+80 bp', 'disrupted', 'MECON · 1 h', [21, 21.8, 22.4, 23.2, 23.9, 24.6]),
+        M('ARS / USD', '1,285', '−1.9%', 'disrupted', 'BCRA · 2 min', [1180, 1205, 1230, 1252, 1268, 1285]),
+        M('Inflation CPI', '142% YoY', 'z +3.1', 'disrupted', 'INDEC · 6 d', [118, 124, 129, 135, 139, 142]),
+        M('GDP growth', '−2.1% QoQ', 'contracting', 'degraded', 'INDEC · 41 d', [0.4, -0.3, -1.1, -1.7, -2.1]),
+        M('Debt / GDP', '88%', '+3 pp', 'degraded', 'IMF · 90 d', [82, 84, 85, 86, 88])
+      ],
+      relations: [
+        { n: 'Brazil', iso: 'br', z: 0.7, tone: 'warm' }, { n: 'China', iso: 'cn', z: 0.4, tone: 'warm' },
+        { n: 'United States', iso: 'us', z: 0.2, tone: 'warm' }, { n: 'IMF programme', iso: 'ar', z: -0.4, tone: 'amber' },
+        { n: 'Chile', iso: 'ar', z: 0.5, tone: 'warm' }
+      ],
+      incidents: ['arinf']
+    };
+    c['Switzerland'] = {
+      dom: { composite: 'operational', economy: 'operational', markets: 'operational', relations: 'operational', conflict: 'operational' },
+      region: 'Europe · CHF · safe-haven', compAge: 'SNB · 3 min',
+      metrics: [
+        M('SMI index', '12,140', '+0.2%', 'operational', 'SIX · 3 min', [12.0, 12.05, 12.08, 12.1, 12.11, 12.14]),
+        M('10Y Confederation', '0.62%', '+1 bp', 'operational', 'SNB · 8 min', [0.6, 0.61, 0.6, 0.62, 0.61, 0.62]),
+        M('CHF / USD', '0.895', '+0.1%', 'operational', 'SNB · 1 min', [0.9, 0.898, 0.896, 0.897, 0.895, 0.895]),
+        M('Inflation CPI', '1.1% YoY', 'stable', 'operational', 'BFS · 8 d', [1.2, 1.1, 1.1, 1.0, 1.1]),
+        M('GDP growth', '0.5% QoQ', 'stable', 'operational', 'SECO · 38 d', [0.4, 0.5, 0.5, 0.5]),
+        M('Debt / GDP', '38%', 'stable', 'operational', 'IMF · 90 d', [39, 38, 38, 38])
+      ],
+      relations: [
+        { n: 'Germany', iso: 'de', z: 0.9, tone: 'warm' }, { n: 'France', iso: 'fr', z: 0.8, tone: 'warm' },
+        { n: 'Italy', iso: 'it', z: 0.7, tone: 'warm' }, { n: 'United States', iso: 'us', z: 0.6, tone: 'warm' },
+        { n: 'EU (bilateral)', iso: 'ch', z: 0.4, tone: 'warm' }
+      ],
+      incidents: []
+    };
+    c['Eritrea'] = {
+      dom: { composite: 'stale', economy: 'stale', markets: 'stale', relations: 'operational', conflict: 'degraded' },
+      region: 'East Africa · ERN · data-sparse', compAge: 'World Bank · 94 d',
+      metrics: [
+        M('Equity market', 'n/a', 'no feed', 'stale', '— · no exchange', []),
+        M('10Y yield', '—', 'no feed', 'stale', '— · no market', []),
+        M('ERN / USD', '15.0', 'pegged', 'stale', 'IMF · 94 d', [15, 15, 15]),
+        M('Inflation CPI', '—', '94 d old', 'stale', 'IMF · 94 d', []),
+        M('GDP growth', '—', '94 d old', 'stale', 'World Bank · 94 d', []),
+        M('Debt / GDP', '164%', '94 d old', 'stale', 'IMF · 94 d', [160, 162, 164])
+      ],
+      relations: [
+        { n: 'Ethiopia', iso: 'er', z: -0.2, tone: 'amber' }, { n: 'Saudi Arabia', iso: 'sa', z: 0.3, tone: 'warm' },
+        { n: 'China', iso: 'cn', z: 0.4, tone: 'warm' }
+      ],
+      incidents: ['erstale']
+    };
+    c['United States of America'] = {
+      dom: { composite: 'degraded', economy: 'operational', markets: 'operational', relations: 'degraded', conflict: 'operational' },
+      region: 'North America · USD · reserve', compAge: 'GDELT · 5 min',
+      metrics: [
+        M('S&P 500', '5,904', '+0.3%', 'operational', 'NYSE · 1 min', [5.82, 5.85, 5.88, 5.86, 5.9, 5.9]),
+        M('10Y Treasury', '4.28%', '+2 bp', 'operational', 'UST · 2 min', [4.2, 4.24, 4.26, 4.25, 4.28]),
+        M('DXY index', '104.6', '+0.1%', 'operational', 'ICE · 1 min', [104, 104.3, 104.4, 104.6]),
+        M('Inflation CPI', '2.9% YoY', 'stable', 'operational', 'BLS · 11 d', [3.1, 3.0, 2.9, 2.9]),
+        M('GDP growth', '2.4% QoQ', 'solid', 'operational', 'BEA · 28 d', [2.1, 2.3, 2.4, 2.4]),
+        M('Bilateral tone', 'cooling', 'z −1.4', 'degraded', 'GDELT · 8 min', [0.4, 0.1, -0.4, -0.9, -1.4])
+      ],
+      relations: [
+        { n: 'United Kingdom', iso: 'gb', z: 0.9, tone: 'warm' }, { n: 'Mexico', iso: 'mx', z: 0.6, tone: 'warm' },
+        { n: 'China', iso: 'cn', z: -1.4, tone: 'amber' }, { n: 'Russia', iso: 'ru', z: -1.1, tone: 'amber' },
+        { n: 'Iran', iso: 'ir', z: -1.8, tone: 'hostile' }
+      ],
+      incidents: ['uscn']
+    };
+    c['China'] = {
+      dom: { composite: 'degraded', economy: 'degraded', markets: 'operational', relations: 'degraded', conflict: 'operational' },
+      region: 'East Asia · CNY', compAge: 'GDELT · 7 min',
+      metrics: [
+        M('CSI 300', '3,988', '−0.4%', 'operational', 'SSE · 2 min', [4.02, 4.0, 3.99, 4.0, 3.99]),
+        M('10Y CGB', '1.68%', '−1 bp', 'operational', 'PBoC · 6 min', [1.72, 1.7, 1.69, 1.68]),
+        M('CNY / USD', '7.28', '−0.1%', 'operational', 'PBoC · 1 min', [7.24, 7.26, 7.27, 7.28]),
+        M('Inflation CPI', '0.3% YoY', 'z −1.2', 'degraded', 'NBS · 9 d', [0.7, 0.5, 0.4, 0.3]),
+        M('GDP growth', '4.6% QoQ', 'softening', 'degraded', 'NBS · 30 d', [5.2, 5.0, 4.8, 4.6]),
+        M('Bilateral tone', 'tense', 'z −1.4', 'degraded', 'GDELT · 7 min', [0.2, -0.3, -0.8, -1.1, -1.4])
+      ],
+      relations: [
+        { n: 'Russia', iso: 'ru', z: 0.8, tone: 'warm' }, { n: 'Brazil', iso: 'br', z: 0.5, tone: 'warm' },
+        { n: 'United States', iso: 'us', z: -1.4, tone: 'amber' }, { n: 'India', iso: 'in', z: -0.9, tone: 'amber' },
+        { n: 'Japan', iso: 'jp', z: -0.9, tone: 'amber' }
+      ],
+      incidents: ['uscn']
+    };
+    this._cur = c; return c;
+  }
+
+  incidentsRaw() {
+    return [
+      { id: 'jpvol', title: 'USD/JPY realized volatility elevated', sev: 'degraded', status: 'ongoing', flags: ['jp'], metric: '1d realized vol · z +2.1', since: '09:40 UTC', country: 'Japan', hasChart: true },
+      { id: 'arinf', title: 'Argentina CPI breach', sev: 'disrupted', status: 'ongoing', flags: ['ar'], metric: 'CPI MoM · z +3.1', since: '06:12 UTC', country: 'Argentina', hasChart: false },
+      { id: 'nikkei', title: 'Nikkei 225 drawdown', sev: 'degraded', status: 'ongoing', flags: ['jp'], metric: 'Index −2.8% · z −1.6', since: '00:15 UTC', country: 'Japan', hasChart: false },
+      { id: 'uscn', title: 'US–China relations cooling', sev: 'degraded', status: 'ongoing', flags: ['us', 'cn'], metric: 'Bilateral tone · z −1.4', since: 'Jul 07 22:30', country: 'United States of America', hasChart: false },
+      { id: 'erstale', title: 'Eritrea macro data stale', sev: 'stale', status: 'ongoing', flags: ['er'], metric: 'Last GDP print · 94 d old', since: 'Apr 05', country: 'Eritrea', hasChart: false },
+      { id: 'trlira', title: 'Turkish lira pressure easing', sev: 'degraded', status: 'resolved', flags: ['tr'], metric: 'USD/TRY · z +0.4', since: 'Jul 07 14:05', country: 'Turkey', hasChart: false },
+      { id: 'eupmi', title: 'Euro-area composite PMI soft', sev: 'degraded', status: 'resolved', flags: ['de', 'fr'], metric: 'PMI · z −1.1', since: 'Jul 06 08:00', country: 'Germany', hasChart: false }
+    ];
+  }
+
+  genCountry(name) {
+    const dom = (this.domains && this.domains[name]) || { composite: 'operational', economy: 'operational', markets: 'operational', relations: 'operational' };
+    const h = this.hash(name);
+    const mk = (label, base, unit, st) => {
+      const vals = Array.from({ length: 6 }, (_, i) => base * (1 + (this.hash(name + label + i) - 0.5) * 0.06));
+      const d = (this.hash(name + label) - 0.5) * 4;
+      return { label, value: (base >= 100 ? Math.round(base).toLocaleString() : base.toFixed(2)) + unit, delta: (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%', state: st, source: (h > 0.5 ? 'GDELT' : 'IMF') + ' · ' + (2 + Math.round(h * 40)) + ' d', vals };
+    };
+    const rels = this.relPairs.filter(p => p[0] === name || p[1] === name).slice(0, 5).map(p => {
+      const other = p[0] === name ? p[1] : p[0]; const z = p[2] === 'warm' ? 0.6 : p[2] === 'amber' ? -0.8 : -1.6;
+      return { n: this.nice(other), iso: this.iso[other] || 'un', z, tone: p[2] };
+    });
+    return {
+      dom, region: 'Composite monitoring', compAge: 'GDELT · ' + (3 + Math.round(h * 20)) + ' min',
+      metrics: [
+        mk('Main equity index', 1000 + h * 40000, '', dom.markets),
+        mk('10Y govt yield', 2 + h * 6, '%', dom.economy),
+        mk('FX vs USD', 1 + h * 100, '', dom.markets),
+        mk('Inflation CPI', 2 + h * 6, '% YoY', dom.economy),
+        mk('GDP growth', 1 + h * 3, '% QoQ', dom.economy),
+        mk('Debt / GDP', 40 + h * 80, '%', dom.economy)
+      ],
+      relations: rels, incidents: []
+    };
+  }
+
+  // ---------- panel build ----------
+  buildCountry(name) {
+    const raw = this.curated()[name] || this.genCountry(name);
+    const cc = this.col(raw.dom.composite);
+    const metrics = raw.metrics.map(m => ({ label: m.label, value: m.value, delta: m.delta, source: m.source, color: this.col(m.state), spark: this.spark(m.vals) }));
+    const relations = (raw.relations || []).map(r => ({ name: r.n, flag: this.flagIso(r.iso), z: (r.z >= 0 ? '+' : '−') + Math.abs(r.z).toFixed(1), pos: (Math.max(0, Math.min(1, (r.z + 2) / 4)) * 84 + 8) + '%', color: this.toneCol(r.tone) }));
+    const incRaw = this.incidentsRaw();
+    const incidents = (raw.incidents || []).map(id => incRaw.find(x => x.id === id)).filter(Boolean).map(inc => ({ title: inc.title, metric: inc.metric, since: inc.since, color: this.col(inc.sev), open: (e) => { this.stop(e); this.openModal(inc.id); } }));
+    const snap = this.snapshot(name);
+    return {
+      name: this.nice(name), region: raw.region, flag: this.flag(name), compAge: raw.compAge,
+      color: cc, glow: this.hexA(cc, 0.4), stateLabel: this.stateLabel(raw.dom.composite),
+      bannerBg: this.hexA(cc, 0.1), bannerBorder: this.hexA(cc, 0.32),
+      econColor: this.col(raw.dom.economy), econLabel: this.stateLabel(raw.dom.economy),
+      mktColor: this.col(raw.dom.markets), mktLabel: this.stateLabel(raw.dom.markets),
+      relColor: this.col(raw.dom.relations), relLabel: this.stateLabel(raw.dom.relations),
+      gdp: snap.gdp, gdppc: snap.gdppc, happy: snap.happy, happyRank: snap.happyRank, pop: snap.pop,
+      metrics, relations, incidents, hasRelations: relations.length > 0, hasIncidents: incidents.length > 0
+    };
+  }
+  snapshot(name) {
+    const S = {
+      'Japan': { gdp: '$4.2T', gdppc: '$33.9k', happy: '6.06', happyRank: '#51', pop: '123.8M' },
+      'Argentina': { gdp: '$0.65T', gdppc: '$14.2k', happy: '6.19', happyRank: '#48', pop: '45.8M' },
+      'Switzerland': { gdp: '$0.88T', gdppc: '$99.9k', happy: '7.06', happyRank: '#9', pop: '8.8M' },
+      'United States of America': { gdp: '$27.4T', gdppc: '$81.7k', happy: '6.72', happyRank: '#23', pop: '335M' },
+      'China': { gdp: '$17.8T', gdppc: '$12.6k', happy: '5.97', happyRank: '#60', pop: '1.41B' },
+      'Eritrea': { gdp: '$2.1B', gdppc: '—', happy: '—', happyRank: 'stale', pop: '3.6M' }
+    };
+    if (S[name]) return S[name];
+    const h = this.hash(name), h2 = this.hash(name + 'p'), popM = 2 + h2 * 400;
+    return { gdp: '$' + (0.05 + h * 3.2).toFixed(2) + 'T', gdppc: '$' + Math.round(2 + h * 68) + 'k', happy: (4.4 + this.hash(name + 'h') * 2.6).toFixed(2), happyRank: '#' + Math.round(8 + this.hash(name + 'r') * 130), pop: popM > 1000 ? (popM / 1000).toFixed(2) + 'B' : Math.round(popM) + 'M' };
+  }
+
+  buildModal(id) {
+    const inc = this.incidentsRaw().find(x => x.id === id); if (!inc) return null;
+    const badge = inc.status === 'resolved' ? { label: 'Resolved', color: this.col('operational'), bg: this.hexA(this.col('operational'), 0.13) } : { label: 'Ongoing', color: this.col(inc.sev), bg: this.hexA(this.col(inc.sev), 0.13) };
+    const base = { color: this.col(inc.sev), glow: this.hexA(this.col(inc.sev), 0.3), title: inc.title, badgeLabel: badge.label, badgeColor: badge.color, badgeBg: badge.bg, flag: this.flagIso(inc.flags[0]), country: this.nice(inc.country) };
+    // chart
+    const W = 560, H = 240, L = 44, R = 540, T = 18, B = 190;
+    const vals = [6.4, 6.1, 6.8, 6.2, 7.0, 6.6, 7.3, 6.9, 7.8, 7.2, 8.1, 7.6, 8.4, 8.0, 9.1, 8.6, 9.8, 9.2, 10.6, 10.0, 11.2, 10.7, 11.9, 11.6, 12.4, 12.1, 13.0, 12.7, 13.6, 13.2, 14.1, 13.9, 14.6, 14.3, 15.0];
+    const mn = 4, mx = 16, thr = 12;
+    const x = i => L + (R - L) * i / (vals.length - 1);
+    const y = v => T + (B - T) * (1 - (v - mn) / (mx - mn));
+    const line = vals.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' ');
+    const area = 'M' + x(0).toFixed(1) + ' ' + y(vals[0]).toFixed(1) + vals.map((v, i) => i ? 'L' + x(i).toFixed(1) + ' ' + y(v).toFixed(1) : '').join('') + 'L' + x(vals.length - 1).toFixed(1) + ' ' + B + 'L' + x(0).toFixed(1) + ' ' + B + 'Z';
+    let bi = vals.findIndex(v => v >= thr); if (bi < 0) bi = vals.length - 1;
+    const yTicks = [4, 8, 12, 16].map(v => ({ y: y(v).toFixed(1), ty: (y(v) + 3).toFixed(1), label: v }));
+    const xLabels = ['07:00', '08:00', '09:00', '10:00'];
+    const xTicks = xLabels.map((label, i) => ({ x: (L + (R - L) * i / (xLabels.length - 1)).toFixed(1), label }));
+    return Object.assign(base, {
+      sub: 'Detected ' + inc.since + ' · confirmation window 15 min · hysteresis armed',
+      metricName: 'USD/JPY 1-day realized volatility', metricSource: 'CME FX · updated 4 min ago',
+      line, area, thrY: y(thr).toFixed(1), thrLabelY: (y(thr) - 6).toFixed(1),
+      breachX: x(bi).toFixed(1), breachY: y(vals[bi]).toFixed(1),
+      yTicks, xTicks,
+      zNow: '+2.1', baseline: '7.4 ± 2.2', note: 'Realized volatility crossed the +1.5σ degraded band at 09:40 UTC and has held above it, tripping the Markets domain for Japan. State will recover once the metric falls back below +0.7σ for a full confirmation window.'
+    });
+  }
+
+  // ---------- render ----------
+  renderVals() {
+    const s = this.state, self = this;
+    const view = s.view, sel = s.selected, domain = s.domain, ov = s.overlays;
+    const foc = sel ? null : s.focus;
+    const names = { composite: 'Composite', economy: 'Economy', markets: 'Markets', conflict: 'Conflict', relations: 'Relations', industry: 'Industries', air: 'Air traffic', sat: 'Satellites', weather: 'Weather', sun: 'Day / night' };
+    const iconOn = '#e4ebf1', iconOff = '#6b747f';
+
+    // incidents feed
+    const incRaw = this.incidentsRaw();
+    const filtered = incRaw.filter(i => s.feedFilter === 'all' || i.status === s.feedFilter);
+    const incidents = filtered.map(inc => ({
+      title: inc.title, metric: inc.metric, since: inc.since, hasChart: inc.hasChart,
+      flags: inc.flags.map(f => this.flagIso(f)),
+      color: this.col(inc.sev), glow: this.hexA(this.col(inc.sev), 0.18),
+      badgeLabel: inc.status === 'resolved' ? 'Resolved' : 'Ongoing',
+      badgeColor: inc.status === 'resolved' ? this.col('operational') : this.col(inc.sev),
+      badgeBg: inc.status === 'resolved' ? this.hexA(this.col('operational'), 0.13) : this.hexA(this.col(inc.sev), 0.13),
+      select: () => this.select(inc.country),
+      open: (e) => { this.stop(e); this.openModal(inc.id); }
+    }));
+
+    // chip styling
+    const chip = (k) => ({
+      border: s.feedFilter === k ? this.hexA(this.emerald || '#3f9d6b', 0.5) : 'var(--line)',
+      bg: s.feedFilter === k ? this.hexA(this.emerald || '#3f9d6b', 0.12) : 'transparent',
+      color: s.feedFilter === k ? (this.emerald || '#3f9d6b') : 'var(--txt2)'
+    });
+    const cA = chip('all'), cO = chip('ongoing'), cR = chip('resolved');
+
+    // search
+    let searchResults = [];
+    if (s.searchOpen && this.features) {
+      const q = s.searchQ.trim().toLowerCase();
+      searchResults = this.features.filter(f => f.properties && f.properties.name).map(f => f.properties.name)
+        .filter(n => !q || this.nice(n).toLowerCase().includes(q))
+        .sort((a, b) => this.nice(a).localeCompare(this.nice(b)))
+        .slice(0, 40).map(n => {
+          const st = (this.domains[n] || {}).composite || 'operational';
+          return { name: this.nice(n), color: this.col(st), state: st, select: () => this.select(n) };
+        });
+    }
+
+    const cd = sel ? this.buildCountry(sel) : null;
+    const md = s.modal ? this.buildModal(s.modal) : null;
+
+    // panel modes (right panel follows the focused overlay when no country is selected)
+    const isInd = foc === 'industry', isAir = foc === 'air', isSat = foc === 'sat', isWx = foc === 'weather', isSun = foc === 'sun';
+    const showFeed = !sel && !isInd && !isAir && !isSat && !isWx && !isSun;
+    const activeLabels = [names[domain]].concat(['relations', 'industry', 'air', 'sat', 'weather', 'sun'].filter(k => ov[k]).map(k => names[k])).join(' · ');
+
+    // industry panel data
+    const curInd = this.industry();
+    const industries = this.industryList().map(i => ({ id: i.id, name: i.name, desc: i.desc, active: i.id === s.industry, nameColor: i.id === s.industry ? '#eef3f8' : 'var(--txt)', border: i.id === s.industry ? this.hexA('#4aa8c9', 0.55) : 'var(--line2)', bg: i.id === s.industry ? this.hexA('#4aa8c9', 0.1) : 'var(--panel2)', select: () => this.setIndustry(i.id) }));
+    const sortedP = curInd.players.slice().sort((a, b) => b.share - a.share);
+    const maxShare = sortedP[0].share;
+    const indPlayers = sortedP.map((p, i) => ({ rank: i + 1, name: this.nice(p.country), flag: this.flag(p.country), role: p.role, share: Math.round(p.share * 100) + '%', barW: (p.share / maxShare * 100) + '%' }));
+    const nc = curInd.chain.length;
+    const indChain = curInd.chain.map((c, i) => ({ num: i + 1, name: this.nice(c.country), flag: this.flag(c.country), stage: c.stage, role: c.role, color: this.lerpHex('#c9974a', this.emerald || '#3f9d6b', nc > 1 ? i / (nc - 1) : 0), last: i === nc - 1, notLast: i !== nc - 1 }));
+    const indChip = (v) => ({ border: s.indView === v ? this.hexA('#4aa8c9', 0.55) : 'var(--line)', bg: s.indView === v ? this.hexA('#4aa8c9', 0.12) : 'transparent', color: s.indView === v ? '#7fcfe8' : 'var(--txt2)' });
+    const ivP = indChip('players'), ivC = indChip('chain');
+
+    // air / sat / weather panel data
+    const airCorridors = [{ n: 'Transatlantic', r: 'NYC · LHR · CDG' }, { n: 'Gulf super-hub', r: 'DXB · DOH · SIN' }, { n: 'Transpacific', r: 'LAX · NRT · ICN' }, { n: 'Kangaroo route', r: 'AMS · SIN · SYD' }, { n: 'Intra-Asia', r: 'HKG · BKK · PEK' }];
+    const satShells = [{ n: 'LEO 53° · broadband', alt: '~550 km', count: 16 }, { n: 'Polar · Earth imaging', alt: '~700 km', count: 11 }, { n: 'LEO 28° · crewed band', alt: '~420 km', count: 13 }, { n: 'MEO 65° · navigation', alt: '~20 200 km', count: 9 }, { n: 'GEO · comms & weather', alt: '35 786 km', count: 6 }];
+    const satTotal = satShells.reduce((a, b) => a + b.count, 0);
+    const storms = this.storms().map(st => ({ name: st.name, cat: st.cat }));
+    // day / night · timezones
+    const nowD = new Date(); const utcMin = nowD.getUTCHours() * 60 + nowD.getUTCMinutes();
+    const zoneDefs = [['Los Angeles', 'UTC−8', -8], ['New York', 'UTC−5', -5], ['London', 'UTC±0', 0], ['Berlin', 'UTC+1', 1], ['Moscow', 'UTC+3', 3], ['Delhi', 'UTC+5:30', 5.5], ['Beijing', 'UTC+8', 8], ['Tokyo', 'UTC+9', 9], ['Sydney', 'UTC+10', 10]];
+    const zones = zoneDefs.map(z => { let m = (utcMin + z[2] * 60) % 1440; if (m < 0) m += 1440; const hh = Math.floor(m / 60), mm = Math.round(m % 60); const isDay = hh >= 6 && hh < 18; return { city: z[0], off: z[1], time: String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0'), dotColor: isDay ? '#d9b84a' : '#3f6fc4', label: isDay ? 'daylight' : 'night' }; });
+    const ss = this.subsolar(); const sunText = 'Subsolar point ' + ss.slat.toFixed(1) + '°, ' + ss.slon.toFixed(1) + '°';
+
+    return {
+      now: s.now, freshAgo: s.freshAgo,
+      isMethod: view === 'methodology', isApp: view !== 'methodology',
+      layerName: activeLabels,
+      noSel: !sel, cd, md, showFeed, isInd, isAir, isSat, isWx, isSun,
+      feedCount: incRaw.filter(i => i.status === 'ongoing').length, incidents,
+      // industry panel
+      industries, indName: curInd.name, indDesc: curInd.desc, indPlayers, indChain,
+      indPlayersActive: s.indView === 'players', indChainActive: s.indView === 'chain',
+      ivPBorder: ivP.border, ivPBg: ivP.bg, ivPColor: ivP.color, ivCBorder: ivC.border, ivCBg: ivC.bg, ivCColor: ivC.color,
+      setPlayers: () => this.setIndView('players'), setChain: () => this.setIndView('chain'),
+      // air / sat / weather panels
+      airCount: this.flightRoutes().length, airCorridors, satShells, satTotal, storms, zones, sunText,
+      // rail
+      isComposite: domain === 'composite', isEconomy: domain === 'economy', isMarkets: domain === 'markets', isConflict: domain === 'conflict',
+      isRelations: ov.relations, isIndustry: ov.industry, isAir: ov.air, isSat: ov.sat, isWeather: ov.weather, isSunLayer: ov.sun,
+      colComposite: domain === 'composite' ? iconOn : iconOff, colEconomy: domain === 'economy' ? iconOn : iconOff, colMarkets: domain === 'markets' ? iconOn : iconOff, colConflict: domain === 'conflict' ? iconOn : iconOff,
+      colRelations: ov.relations ? iconOn : iconOff, colIndustry: ov.industry ? iconOn : iconOff, colAir: ov.air ? iconOn : iconOff, colSat: ov.sat ? iconOn : iconOff, colWeather: ov.weather ? iconOn : iconOff, colSun: ov.sun ? iconOn : iconOff,
+      colSearch: s.searchOpen ? '#e4ebf1' : '#6b747f', colMethod: view === 'methodology' ? '#e4ebf1' : '#6b747f',
+      // legend
+      legendTitle: 'Legend',
+      showToneLegend: ov.relations || !!sel,
+      showStateLegend: !sel && !ov.weather,
+      showShareLegend: !sel && ov.industry && s.indView === 'players',
+      showChainLegend: !sel && ov.industry && s.indView === 'chain',
+      showTempLegend: !sel && ov.weather,
+      showSunLegend: !sel && ov.sun,
+      showTraffic: !sel && (ov.air || ov.sat),
+      trafficLabel: (ov.air && ov.sat) ? 'animated flights + satellites in view' : ov.air ? 'animated = live flight paths' : 'dots = satellites in view',
+      // search
+      searchOpen: s.searchOpen, searchQ: s.searchQ, searchResults,
+      // chips
+      chipAllBorder: cA.border, chipAllBg: cA.bg, chipAllColor: cA.color,
+      chipOnBorder: cO.border, chipOnBg: cO.bg, chipOnColor: cO.color,
+      chipReBorder: cR.border, chipReBg: cR.bg, chipReColor: cR.color,
+      // handlers
+      toggleSearch: () => this.toggleSearch(), onSearch: (e) => this.onSearch(e),
+      setComposite: () => this.setDomain('composite'), setEconomy: () => this.setDomain('economy'), setMarkets: () => this.setDomain('markets'), setConflict: () => this.setDomain('conflict'),
+      toggleRelations: () => this.toggleOverlay('relations'), toggleIndustry: () => this.toggleOverlay('industry'), toggleAir: () => this.toggleOverlay('air'), toggleSat: () => this.toggleOverlay('sat'), toggleWeather: () => this.toggleOverlay('weather'), toggleSun: () => this.toggleOverlay('sun'),
+      openMethod: () => this.openMethod(), goHome: () => this.goHome(),
+      closeCountry: () => this.closeCountry(), closeModal: () => this.closeModal(), stop: (e) => this.stop(e),
+      setAll: () => this.setState({ feedFilter: 'all' }), setOngoing: () => this.setState({ feedFilter: 'ongoing' }), setResolved: () => this.setState({ feedFilter: 'resolved' })
+    };
+  }
+}
+</script>
+</body>
+</html>
