@@ -124,6 +124,26 @@ def tiles():
     ]
 
 
+# Health single-select domains that own a per-country score row (the globe's
+# Health group). `relations` backs the UI's "conflict" metric.
+_DOMAIN_TILE_KEYS = frozenset({"composite", "economy", "markets", "relations", "news"})
+
+
+@app.get("/api/domain-tiles")
+def domain_tiles(domain: str = "composite"):
+    """Per-country committed state for ONE domain — the Health single-select's global
+    breakdown. 404 on an unknown domain so an older client can tell a real per-domain
+    response apart from a backend that silently ignores the param."""
+    if domain not in _DOMAIN_TILE_KEYS:
+        raise HTTPException(status_code=404, detail=f"unknown domain {domain}")
+    return [
+        {"country": c.strip(), "name": _name(c.strip()), "state": s}
+        for c, s in q(
+            "SELECT DISTINCT ON (country) country, state FROM score "
+            "WHERE domain=%s ORDER BY country, computed_at DESC", (domain,))
+    ]
+
+
 def _band(tone: float) -> str:
     return "hostile" if tone <= -0.5 else ("tense" if tone < 0.4 else "warm")
 
