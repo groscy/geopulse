@@ -43,3 +43,64 @@ Incidents SHALL be stored in `incident(id uuid, severity text, countries char(3)
 - **WHEN** a bilateral relation (e.g. US↔CN tone) breaches
 - **THEN** the incident's `countries` array contains both affected codes
 
+### Requirement: Weather anomaly incidents
+The engine SHALL open **per-facet** weather incidents for the standalone weather facet domains (`weather_temp`, `weather_precip`, `weather_wind`) when a country's committed facet state reaches that facet's configured incident floor (v1: `disrupted`, |z| ≥ 2), keyed `country:<facet>` (e.g. `country:weather_precip`), reusing the existing incident schema, dedup, and resolution lifecycle. Incident titles SHALL name the facet and, where two-sided, its direction: `weather_temp` → "heat anomaly" (z > 0) or "cold anomaly" (z < 0); `weather_precip` → "flood risk"; `weather_wind` → "wind event". Incident-eligibility SHALL remain decoupled from worst-of-composite membership, so the weather facets open incidents while the `news` domain (also excluded from the composite) remains incident-free.
+
+#### Scenario: Flood risk opens a precip incident
+- **WHEN** a country's committed `weather_precip` state reaches its incident floor (disrupted)
+- **THEN** exactly one `country:weather_precip` incident is opened titled "{country} · flood risk", with the triggering `weather_precip` decomposition in `detail`, without duplicating an already-open one
+
+#### Scenario: Wind event opens a wind incident
+- **WHEN** a country's committed `weather_wind` state reaches its incident floor (disrupted) on the high tail
+- **THEN** exactly one `country:weather_wind` incident is opened titled "{country} · wind event"
+
+#### Scenario: Heat/cold anomaly opens an incident
+- **WHEN** a country's committed `weather_temp` state reaches its incident floor (disrupted)
+- **THEN** exactly one `country:weather_temp` incident is opened, titled "{country} · heat anomaly" when z > 0 and "{country} · cold anomaly" when z < 0
+
+#### Scenario: Anomaly recovery resolves the incident
+- **WHEN** a country's `weather_precip` recovers below its floor under the hysteresis recovery rule while its `weather_temp` remains disrupted
+- **THEN** the `country:weather_precip` incident's `resolved_at` is set while the `country:weather_temp` incident stays open
+
+#### Scenario: Calm week opens no wind incident
+- **WHEN** a country's `weather_wind` z is strongly negative (an unusually calm week)
+- **THEN** no `country:weather_wind` incident is opened, because the one-sided facet is operational on the low tail
+
+#### Scenario: News remains incident-free
+- **WHEN** a country's `news` domain is disrupted
+- **THEN** no `country:news` incident is opened, because `news` is not incident-eligible even though the weather facets are
+
+### Requirement: Storm incidents
+The engine SHALL open a `country:storm` incident for each tracked country threatened by an active tropical cyclone, with severity derived from the storm's Saffir-Simpson category (higher categories map to `disrupted`, weaker systems to `degraded`), reusing the existing incident schema, dedup, and resolution lifecycle. The incident `detail` SHALL carry the storm's name, category, and position. When a country is threatened by more than one active storm, the incident SHALL reflect the most severe. A `country:storm` incident SHALL be resolved when no active storm threatens that country (the storm dissipated or moved beyond the resolve-distance threshold). Storm incidents SHALL be produced independently of the worst-of composite membership, exactly as the weather-facet incidents are.
+
+#### Scenario: Active storm opens a storm incident
+- **WHEN** an active cyclone threatens a tracked country at or above the severity floor
+- **THEN** exactly one `country:storm` incident is opened, titled for the storm and country, with the storm name/category/position in `detail`, without duplicating an already-open one
+
+#### Scenario: Severity follows category
+- **WHEN** a threatening storm is a major hurricane (high category) versus a weak tropical system
+- **THEN** the storm incident's severity is `disrupted` for the major system and `degraded` for the weak one
+
+#### Scenario: Storm incident resolves when the threat clears
+- **WHEN** no active storm threatens a country any longer (dissipated or departed beyond the resolve distance)
+- **THEN** that country's `country:storm` incident `resolved_at` is set
+
+#### Scenario: Composite unaffected by storm incidents
+- **WHEN** a `country:storm` incident is open while the country's scored domains are operational
+- **THEN** the country's composite state is unchanged, because storms are not a scored domain
+
+### Requirement: Drought incidents
+The engine SHALL open a `country:weather_drought` incident when a country's committed `weather_drought` state reaches its configured incident floor (disrupted), titled "{country} · drought", reusing the existing incident schema, dedup, and resolution lifecycle, and independent of worst-of-composite membership. It SHALL resolve independently when the deficit recovers under the hysteresis recovery rule. Flood (`weather_precip`), wind, and heat/cold incidents SHALL be unchanged.
+
+#### Scenario: Drought opens a drought incident
+- **WHEN** a country's committed `weather_drought` state reaches its incident floor (disrupted)
+- **THEN** exactly one `country:weather_drought` incident is opened, titled "{country} · drought", with the deficit decomposition in `detail`
+
+#### Scenario: Independent drought resolution
+- **WHEN** a country's `weather_drought` recovers below its floor under the hysteresis recovery rule while another facet stays disrupted
+- **THEN** the `country:weather_drought` incident's `resolved_at` is set while the other facet's incident stays open
+
+#### Scenario: Wet period opens no drought incident
+- **WHEN** a country's precipitation is at or above its climatological normal
+- **THEN** no `country:weather_drought` incident is opened, because the facet is one-sided (deficit only)
+
