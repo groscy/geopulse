@@ -3,7 +3,7 @@ name: geopulse
 # GeoPulse — local-first stack (NFR-1). Egress only to public upstream APIs.
 #
 # Profiles (M4):
-#   lite (default) : db + migrate + markets + gdelt + fx + scoring + api + frontend
+#   lite (default) : db + migrate + markets + gdelt + fx + weather + scoring + api + frontend
 #                    -> `podman compose up --build`  (or `--profile lite up`)
 #   full           : lite + macro-worker (World Bank macro)
 #                    -> `podman compose --profile full up --build`
@@ -82,6 +82,40 @@ services:
   fx-worker:
     image: geopulse/services:local
     command: ["python", "fx-worker/main.py"]
+    env_file: [.env]
+    environment: *service-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  weather-worker:
+    image: geopulse/services:local
+    command: ["python", "weather-worker/main.py"]
+    env_file: [.env]
+    environment: *service-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ambient atmospheric field (cloud/wind/precip grid) for the overlay's cloud shell.
+  # Egress only to Open-Meteo; caches one blob, never touches the scoring spine.
+  weather-field-worker:
+    image: geopulse/services:local
+    command: ["python", "weather-field-worker/main.py"]
+    env_file: [.env]
+    environment: *service-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # live tropical cyclones (NHC) -> real storm spirals + country:storm incidents.
+  # Egress only to the NHC feed; feature data, never touches the scoring spine.
+  storm-worker:
+    image: geopulse/services:local
+    command: ["python", "storm-worker/main.py"]
     env_file: [.env]
     environment: *service-env
     depends_on:

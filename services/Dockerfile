@@ -12,7 +12,8 @@ ENV PYTHONUNBUFFERED=1 \
 COPY services/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# service packages (common, markets-worker, gdelt-worker, scoring-engine, api)
+# service packages (common, markets-worker, gdelt-worker, fx-worker, macro-worker,
+# weather-worker, weather-field-worker, storm-worker, scoring-engine, api)
 COPY services /app
 # migrations, baked in so the migrate service needs no host mount
 COPY db /app/db

@@ -1,9 +1,21 @@
-# keep the services image build context small
-frontend
+# Shared by the root-context builds (all-in-one Dockerfile + services/Dockerfile).
+# The all-in-one image needs frontend/ + services/ + db/, so only prune what no
+# build consumes, plus secrets and generated/heavy artifacts.
+.git
+.claude
 openspec
 design_handoff_geopulse
-.claude
-.git
+*.md
+
+# secrets / local env (never bake into an image)
+.env
+.env.*
+!.env.example
+
+# generated / heavy
 **/__pycache__
 **/*.pyc
-*.md
+**/*.local
+frontend/node_modules
+frontend/dist
+frontend/.vite
