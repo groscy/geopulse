@@ -4,7 +4,7 @@
  * (sparklines from live series, active incidents, SSE) is M2 country-drilldown.
  */
 import { Flag, Sparkline, StateDot, stateLabel, stateVar } from '../components/bits';
-import type { CountryDetail } from '../data/types';
+import type { CountryDetail, MetricRow } from '../data/types';
 import { useAppActions } from '../state/store';
 
 function ageText(min: number | null): string {
@@ -12,6 +12,26 @@ function ageText(min: number | null): string {
   if (min < 60) return `${min} min`;
   if (min < 1440) return `${Math.round(min / 60)} h`;
   return `${Math.round(min / 1440)} d`;
+}
+
+/** One key-metric row (label, source·age, sparkline, value, trailing state dot). */
+function MetricLine({ m }: { m: MetricRow }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid var(--line2)' }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 12, color: 'var(--txt)' }}>{m.label}</div>
+        <div className="mono" style={{ fontSize: 10, color: 'var(--txt3)' }}>{m.source} · {ageText(m.ageMin)}</div>
+      </div>
+      <Sparkline series={m.series} state={m.state} />
+      <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div>
+          <div className="mono" style={{ fontSize: 12.5, color: '#e7eef4' }}>{m.value}</div>
+          {m.delta && <div className="mono" style={{ fontSize: 10.5, color: stateVar(m.state) }}>{m.delta}</div>}
+        </div>
+        <StateDot state={m.state} size={7} />
+      </div>
+    </div>
+  );
 }
 
 export function CountryDrilldown({ c }: { c: CountryDetail }) {
@@ -77,24 +97,51 @@ export function CountryDrilldown({ c }: { c: CountryDetail }) {
       <div>
         <div className="section-label" style={{ marginBottom: 6 }}>Key metrics</div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {c.metrics.map((m) => (
-            <div key={m.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid var(--line2)' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: 'var(--txt)' }}>{m.label}</div>
-                <div className="mono" style={{ fontSize: 10, color: 'var(--txt3)' }}>{m.source} · {ageText(m.ageMin)}</div>
-              </div>
-              <Sparkline series={m.series} state={m.state} />
-              <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div>
-                  <div className="mono" style={{ fontSize: 12.5, color: '#e7eef4' }}>{m.value}</div>
-                  {m.delta && <div className="mono" style={{ fontSize: 10.5, color: stateVar(m.state) }}>{m.delta}</div>}
-                </div>
-                <StateDot state={m.state} size={7} />
-              </div>
-            </div>
-          ))}
+          {c.metrics.map((m) => <MetricLine key={m.key} m={m} />)}
         </div>
       </div>
+
+      {/* news domain — standalone, informational; never feeds the composite */}
+      <div>
+        <div className="section-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span>News</span>
+          <span className="mono" style={{ fontSize: 9.5, color: 'var(--txt3)', textTransform: 'none', letterSpacing: 0 }}>standalone · not in composite</span>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '9px 11px',
+            borderRadius: 'var(--r-card)',
+            background: `color-mix(in srgb, ${stateVar(c.domains.news)} 9%, var(--panel2))`,
+            border: `1px dashed color-mix(in srgb, ${stateVar(c.domains.news)} 40%, var(--line2))`,
+            marginBottom: 8,
+          }}
+        >
+          <StateDot state={c.domains.news} glow size={10} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: stateVar(c.domains.news) }}>{stateLabel(c.domains.news)}</div>
+            <div className="mono" style={{ fontSize: 10, color: 'var(--txt3)' }}>Media climate · GDELT coverage</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {c.newsMetrics.map((m) => <MetricLine key={m.key} m={m} />)}
+        </div>
+      </div>
+
+      {/* weather facets — standalone; scored & incident-driving, never in the composite */}
+      {(c.weatherFacets?.length ?? 0) > 0 && (
+        <div>
+          <div className="section-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span>Weather</span>
+            <span className="mono" style={{ fontSize: 9.5, color: 'var(--txt3)', textTransform: 'none', letterSpacing: 0 }}>standalone · not in composite</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {c.weatherFacets!.map((m) => <MetricLine key={m.key} m={m} />)}
+          </div>
+        </div>
+      )}
 
       {/* top relations */}
       {c.relations.length > 0 && (

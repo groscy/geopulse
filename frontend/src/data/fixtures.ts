@@ -58,7 +58,7 @@ export const COUNTRIES: CountryDetail[] = [
     composite: 'degraded',
     source: 'GDELT',
     ageMin: 3,
-    domains: { economy: 'operational', markets: 'degraded', relations: 'operational' },
+    domains: { economy: 'operational', markets: 'degraded', relations: 'operational', news: 'operational' },
     metrics: [
       metric('equity', 'Nikkei 225', '38,204', '−2.8% · z −1.6', 'degraded', 'Twelve Data', 4, trend(39400, 38204)),
       metric('bond10y', '10Y JGB', '0.98%', '+4bp', 'operational', 'FRED', 60, trend(0.94, 0.98)),
@@ -66,6 +66,11 @@ export const COUNTRIES: CountryDetail[] = [
       metric('cpi', 'CPI (YoY)', '2.8%', null, 'operational', 'World Bank', 1440, flat(2.8)),
       metric('gdp', 'GDP (QoQ)', '0.9%', null, 'operational', 'OECD', 1440, flat(0.9)),
       metric('debt', 'Debt / GDP', '255%', null, 'operational', 'IMF', 1440, flat(255)),
+    ],
+    newsMetrics: [
+      metric('news_tone', 'News tone', '+1.2', 'z +0.6', 'operational', 'GDELT', 3, trend(0.4, 1.2)),
+      metric('news_goldstein', 'Conflict intensity', '+0.9', null, 'operational', 'GDELT', 3, trend(0.3, 0.9)),
+      metric('news_volume', 'Coverage volume', '412', 'z +0.4', 'operational', 'GDELT', 3, trend(360, 412)),
     ],
     relations: [
       rel('USA', 'United States', 0.8),
@@ -85,7 +90,7 @@ export const COUNTRIES: CountryDetail[] = [
     composite: 'disrupted',
     source: 'World Bank',
     ageMin: 30,
-    domains: { economy: 'disrupted', markets: 'degraded', relations: 'operational' },
+    domains: { economy: 'disrupted', markets: 'degraded', relations: 'operational', news: 'degraded' },
     metrics: [
       metric('equity', 'Merval', '1,842,300', '+1.2%', 'degraded', 'Twelve Data', 5, trend(1820000, 1842300)),
       metric('bond10y', '10Y USD bond', '24.6%', '+80bp', 'disrupted', 'FRED', 60, trend(23.8, 24.6)),
@@ -93,6 +98,11 @@ export const COUNTRIES: CountryDetail[] = [
       metric('cpi', 'CPI (YoY)', '142%', 'z +3.1', 'disrupted', 'World Bank', 1440, trend(128, 142)),
       metric('gdp', 'GDP (QoQ)', '−2.1%', null, 'disrupted', 'OECD', 1440, flat(-2.1)),
       metric('debt', 'Debt / GDP', '88%', null, 'degraded', 'IMF', 1440, flat(88)),
+    ],
+    newsMetrics: [
+      metric('news_tone', 'News tone', '−2.4', 'z −1.4', 'degraded', 'GDELT', 6, trend(-0.8, -2.4)),
+      metric('news_goldstein', 'Conflict intensity', '−1.1', null, 'degraded', 'GDELT', 6, trend(-0.2, -1.1)),
+      metric('news_volume', 'Coverage volume', '286', 'z +1.2', 'degraded', 'GDELT', 6, trend(150, 286)),
     ],
     relations: [],
     incidents: [],
@@ -106,7 +116,7 @@ export const COUNTRIES: CountryDetail[] = [
     composite: 'operational',
     source: 'GDELT',
     ageMin: 4,
-    domains: { economy: 'operational', markets: 'operational', relations: 'operational' },
+    domains: { economy: 'operational', markets: 'operational', relations: 'operational', news: 'operational' },
     metrics: [
       metric('equity', 'SMI', '12,140', '+0.1%', 'operational', 'Twelve Data', 5, flat(12140)),
       metric('bond10y', '10Y', '0.62%', '±0bp', 'operational', 'FRED', 60, flat(0.62)),
@@ -114,6 +124,11 @@ export const COUNTRIES: CountryDetail[] = [
       metric('cpi', 'CPI (YoY)', '1.1%', null, 'operational', 'World Bank', 1440, flat(1.1)),
       metric('gdp', 'GDP (QoQ)', '0.5%', null, 'operational', 'OECD', 1440, flat(0.5)),
       metric('debt', 'Debt / GDP', '38%', null, 'operational', 'IMF', 1440, flat(38)),
+    ],
+    newsMetrics: [
+      metric('news_tone', 'News tone', '+2.0', null, 'operational', 'GDELT', 4, flat(2.0)),
+      metric('news_goldstein', 'Conflict intensity', '+1.4', null, 'operational', 'GDELT', 4, flat(1.4)),
+      metric('news_volume', 'Coverage volume', '96', null, 'operational', 'GDELT', 4, flat(96)),
     ],
     relations: [],
     incidents: [],
@@ -127,7 +142,7 @@ export const COUNTRIES: CountryDetail[] = [
     composite: 'degraded',
     source: 'GDELT',
     ageMin: 3,
-    domains: { economy: 'operational', markets: 'operational', relations: 'degraded' },
+    domains: { economy: 'operational', markets: 'operational', relations: 'degraded', news: 'degraded' },
     metrics: [
       metric('equity', 'S&P 500', '5,904', '+0.2%', 'operational', 'Finnhub', 3, trend(5890, 5904)),
       metric('bond10y', '10Y', '4.28%', '+2bp', 'operational', 'FRED', 60, trend(4.24, 4.28)),
@@ -135,6 +150,11 @@ export const COUNTRIES: CountryDetail[] = [
       metric('cpi', 'CPI (YoY)', '2.9%', null, 'operational', 'World Bank', 1440, flat(2.9)),
       metric('gdp', 'GDP (QoQ)', '2.4%', null, 'operational', 'OECD', 1440, flat(2.4)),
       staleMetric('debt', 'Debt / GDP'),
+    ],
+    newsMetrics: [
+      metric('news_tone', 'News tone', '−1.6', 'z −1.2', 'degraded', 'GDELT', 3, trend(-0.4, -1.6)),
+      metric('news_goldstein', 'Conflict intensity', '−1.0', null, 'degraded', 'GDELT', 3, trend(-0.3, -1.0)),
+      metric('news_volume', 'Coverage volume', '1,284', 'z +0.8', 'operational', 'GDELT', 3, trend(1100, 1284)),
     ],
     relations: [rel('CHN', 'China', -1.4)],
     incidents: [],
@@ -148,7 +168,7 @@ export const COUNTRIES: CountryDetail[] = [
     composite: 'degraded',
     source: 'GDELT',
     ageMin: 3,
-    domains: { economy: 'degraded', markets: 'operational', relations: 'operational' },
+    domains: { economy: 'degraded', markets: 'operational', relations: 'operational', news: 'degraded' },
     metrics: [
       metric('equity', 'CSI 300', '3,988', '−0.4%', 'operational', 'Finnhub', 3, trend(4005, 3988)),
       metric('bond10y', '10Y', '1.68%', '−1bp', 'operational', 'FRED', 60, flat(1.68)),
@@ -156,6 +176,11 @@ export const COUNTRIES: CountryDetail[] = [
       metric('cpi', 'CPI (YoY)', '0.3%', 'z −1.2', 'degraded', 'World Bank', 1440, trend(0.9, 0.3)),
       metric('gdp', 'GDP (QoQ)', '4.6%', null, 'operational', 'OECD', 1440, flat(4.6)),
       staleMetric('debt', 'Debt / GDP'),
+    ],
+    newsMetrics: [
+      metric('news_tone', 'News tone', '−1.3', 'z −1.1', 'degraded', 'GDELT', 3, trend(-0.5, -1.3)),
+      metric('news_goldstein', 'Conflict intensity', '−0.8', null, 'operational', 'GDELT', 3, trend(-0.2, -0.8)),
+      metric('news_volume', 'Coverage volume', '902', 'z +0.6', 'operational', 'GDELT', 3, trend(780, 902)),
     ],
     relations: [rel('USA', 'United States', -1.4)],
     incidents: [],
@@ -169,7 +194,7 @@ export const COUNTRIES: CountryDetail[] = [
     composite: 'stale',
     source: 'World Bank',
     ageMin: null,
-    domains: { economy: 'stale', markets: 'stale', relations: 'stale' },
+    domains: { economy: 'stale', markets: 'stale', relations: 'stale', news: 'stale' },
     metrics: [
       staleMetric('equity', 'Equity index'),
       staleMetric('bond10y', '10Y'),
@@ -177,6 +202,11 @@ export const COUNTRIES: CountryDetail[] = [
       staleMetric('cpi', 'CPI (YoY)'),
       staleMetric('gdp', 'GDP (QoQ)'),
       metric('debt', 'Debt / GDP', '164%', '94 d old', 'stale', 'IMF', 94 * 1440, []),
+    ],
+    newsMetrics: [
+      staleMetric('news_tone', 'News tone'),
+      staleMetric('news_goldstein', 'Conflict intensity'),
+      staleMetric('news_volume', 'Coverage volume'),
     ],
     relations: [],
     incidents: [],

@@ -7,7 +7,7 @@
  * rest render as neutral land. Extend this map (or swap in a full lookup) when
  * the live API scores more countries.
  */
-import { geoCentroid } from 'd3-geo';
+import { geoArea, geoCentroid } from 'd3-geo';
 import { feature, mesh } from 'topojson-client';
 import topoData from 'world-atlas/countries-110m.json';
 import type { Feature, FeatureCollection, MultiLineString } from 'geojson';
@@ -68,4 +68,29 @@ for (const f of COUNTRY_FEATURES) {
   const iso = isoForFeature(f);
   if (iso) CENTROIDS[iso] = c;
   CENTROIDS_BY_NAME[featureName(f)] = c;
+}
+
+/**
+ * ISO-3 -> [lon, lat] label anchor: the centroid of the country's LARGEST polygon
+ * rather than of the whole multi-polygon. Countries with distant overseas parts
+ * (France + French Guiana, USA + Alaska/Hawaii, …) otherwise anchor at an
+ * ocean-bound multi-polygon centroid; the largest-polygon centroid keeps the label
+ * on the mainland.
+ */
+export const LABEL_POINTS: Record<string, [number, number]> = {};
+for (const f of COUNTRY_FEATURES) {
+  const iso = isoForFeature(f);
+  if (!iso) continue;
+  const g = f.geometry;
+  if (g && g.type === 'MultiPolygon' && g.coordinates.length > 1) {
+    let best = g.coordinates[0];
+    let bestArea = -1;
+    for (const poly of g.coordinates) {
+      const a = geoArea({ type: 'Polygon', coordinates: poly });
+      if (a > bestArea) { bestArea = a; best = poly; }
+    }
+    LABEL_POINTS[iso] = geoCentroid({ type: 'Polygon', coordinates: best }) as [number, number];
+  } else {
+    LABEL_POINTS[iso] = geoCentroid(f) as [number, number];
+  }
 }

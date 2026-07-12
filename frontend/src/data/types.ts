@@ -16,6 +16,68 @@ export interface Tile {
   computedAt: string;
 }
 
+/** Switchable Meteorological overlay mode — the facet the choropleth paints. */
+export type WeatherMode = 'temp' | 'precip' | 'wind';
+
+/**
+ * One row of GET /api/weather — all three facet aggregates + per-facet committed
+ * anomaly state, so the overlay switches modes with no refetch. Aggregates are
+ * `null` where a country has no live data for that facet (its state is `stale`).
+ */
+export interface WeatherRow {
+  country: string; // ISO-3
+  tempC: number | null; // 7-day mean °C
+  precipMm: number | null; // 7-day total mm
+  windMax: number | null; // 7-day max km/h
+  states: { temp: HealthState; precip: HealthState; wind: HealthState };
+  /** signed per-facet anomaly z (null where stale) — for the Anomaly view */
+  z: { temp: number | null; precip: number | null; wind: number | null };
+  ageMin: number | null;
+}
+
+/** One node of the ambient atmospheric field grid (GET /api/weather-field). */
+export interface FieldCell {
+  lat: number;
+  lon: number;
+  cloud: number | null; // cloud cover %
+  u: number | null; // wind east component (km/h)
+  v: number | null; // wind north component (km/h)
+  precip: number | null; // mm
+}
+
+/**
+ * The cached global atmospheric field (GET /api/weather-field), in packed columnar
+ * form: grid dimensions + flat per-channel arrays (row-major, lat outer / lon inner),
+ * so a finer grid stays cheap. Ambient only — no country, no z-score; rendered as the
+ * overlay's continuous cloud layer. Node (ilat, ilon) lives at index ilat*nlon + ilon,
+ * lon = -180 + ilon*step, lat = latMin + ilat*step.
+ */
+export interface WeatherField {
+  latMin: number;
+  step: number;
+  nlat: number;
+  nlon: number;
+  cloud: (number | null)[];
+  u: (number | null)[];
+  v: (number | null)[];
+  precip: (number | null)[];
+  ts: string | null;
+  ageMin: number | null;
+}
+
+/** One active tropical cyclone from GET /api/storms (feature data; opens country:storm incidents). */
+export interface StormFeature {
+  id: string;
+  name: string; // e.g. "Hurricane Alberto"
+  basin: string;
+  lat: number;
+  lon: number;
+  category: number; // Saffir-Simpson 0–5
+  categoryLabel: string; // "Cat 3" / "Trop. Storm"
+  intensityKt: number;
+  track: [number, number][]; // near-term [lon, lat] forecast points
+}
+
 /** A single key-metric row in the drill-down. `ageMin: null` == stale / no data. */
 export interface MetricRow {
   key: string;
@@ -39,6 +101,8 @@ export interface DomainStates {
   economy: HealthState;
   markets: HealthState;
   relations: HealthState;
+  /** standalone News domain — colored & selectable, but never feeds the composite. */
+  news: HealthState;
 }
 
 /** An incident in the global feed (GET /api/incidents). */
@@ -100,6 +164,8 @@ export interface CountryDetail {
   ageMin: number | null;
   domains: DomainStates;
   metrics: MetricRow[]; // the six standard metrics
+  newsMetrics: MetricRow[]; // News domain rows (tone / Goldstein / volume)
+  weatherFacets?: MetricRow[]; // standalone weather facets (temp/precip/wind/drought)
   relations: Relation[];
   incidents: ActiveIncident[]; // active incidents for this country
   stats: CountryStats;

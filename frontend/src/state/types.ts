@@ -4,7 +4,13 @@
  * (lambda / phi / rAF loop) lives OUTSIDE this model, in the globe renderer (M1).
  */
 
-export type HealthMetric = 'composite' | 'economy' | 'markets' | 'conflict';
+export type HealthMetric = 'composite' | 'economy' | 'markets' | 'conflict' | 'news';
+
+/** Meteorological overlay sub-mode — which weather facet the choropleth paints. */
+export type WeatherMode = 'temp' | 'precip' | 'wind';
+
+/** Meteorological overlay lens — absolute value vs per-country anomaly (z). */
+export type WeatherView = 'value' | 'anomaly';
 
 export type OverlayId = 'relations' | 'industry' | 'air' | 'sat' | 'weather' | 'sun';
 
@@ -40,6 +46,10 @@ export interface AppState {
   /** industries overlay sub-state */
   industry: string;
   indView: IndView;
+  /** meteorological overlay sub-mode (temp / precip / wind choropleth) */
+  weatherMode: WeatherMode;
+  /** meteorological overlay lens (absolute value vs anomaly z) */
+  weatherView: WeatherView;
   /** incident feed filter */
   feedFilter: FeedFilter;
   /** search overlay */

@@ -12,6 +12,9 @@ import { useAppActions } from '../state/store';
 import type { Incident, Tile } from './types';
 
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
+// Same-origin deploys set VITE_API_BASE='/'; strip the trailing slash so the SSE
+// URL is `/api/stream`, not the protocol-relative `//api/stream`.
+const API_ORIGIN = API_BASE?.replace(/\/$/, '');
 
 interface Live {
   tiles: Tile[];
@@ -46,7 +49,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     let retry: number | undefined;
 
     const connect = () => {
-      es = new EventSource(`${API_BASE}/api/stream`);
+      es = new EventSource(`${API_ORIGIN}/api/stream`);
       es.addEventListener('tile', (e) => {
         const d = JSON.parse((e as MessageEvent).data) as { country: string; state: Tile['state'] };
         setTiles((prev) => {

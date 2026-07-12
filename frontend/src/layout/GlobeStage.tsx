@@ -14,6 +14,7 @@ const NAMES: Record<string, string> = {
   economy: 'Economy',
   markets: 'Markets',
   conflict: 'Conflict',
+  news: 'News',
   relations: 'Relations',
   industry: 'Industries',
   air: 'Air traffic',

@@ -51,6 +51,13 @@ export const IconConflict = () => (
     <path d="M12 10v4M12 17h.01" />
   </Svg>
 );
+export const IconNews = () => (
+  <Svg>
+    <path d="M4 5h13v14H5a1 1 0 01-1-1z" />
+    <path d="M17 8h3v9a2 2 0 01-2 2" />
+    <path d="M7 8h7M7 11h7M7 14h4" />
+  </Svg>
+);
 export const IconRelations = () => (
   <Svg>
     <circle cx="5" cy="6" r="2" />

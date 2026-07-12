@@ -2,12 +2,16 @@
  * Per-overlay right panels — capability: extended-overlays (3.4, 4.3, 5.3, 6.3, 7.3).
  * Shown by the focus rule when an overlay owns the panel and nothing is selected.
  */
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useAppActions, useAppState } from '../state/store';
 import type { OverlayId } from '../state/types';
 import {
   CORRIDORS, FLIGHT_ROUTES, INDUSTRIES, SAT_SHELLS, SAT_TOTAL, STORMS, ZONES,
 } from '../data/overlays';
+import { fetchWeather, fetchStorms } from '../data/apiSource';
+import { ANOM_META, MODE_META, MODES } from '../data/weather';
+import type { StormFeature, WeatherRow } from '../data/types';
+import { stateVar } from '../components/bits';
 
 function Label({ children }: { children: ReactNode }) {
   return <div className="section-label" style={{ margin: '4px 0 6px' }}>{children}</div>;
@@ -104,21 +108,107 @@ function Satellites() {
   );
 }
 
+function ValRow({ country, value }: { country: string; value: string }) {
+  return (
+    <div style={row}>
+      <span className="mono" style={{ fontSize: 12, color: 'var(--txt)' }}>{country}</span>
+      <span className="mono" style={{ fontSize: 11, color: 'var(--txt2)' }}>{value}</span>
+    </div>
+  );
+}
+
+// per-mode ranked-list heading noun (temperature is two-sided, so it also lists coldest)
+const TOP_LABEL: Record<string, string> = { temp: 'warmest', precip: 'wettest', wind: 'windiest' };
+
 function Weather() {
+  const { weatherMode, weatherView } = useAppState();
+  const { setWeatherMode, setWeatherView } = useAppActions();
+  const [rows, setRows] = useState<WeatherRow[]>([]);
+  const [storms, setStorms] = useState<StormFeature[]>([]);
+  useEffect(() => {
+    const base = import.meta.env.VITE_API_BASE as string | undefined;
+    if (!base) return; // fixtures/demo: no live weather, show storms + legend only
+    let alive = true;
+    // one fetch holds all three facets; switching mode never refetches.
+    fetchWeather(base).then((d) => { if (alive) setRows(d); }).catch(() => {});
+    fetchStorms(base).then((s) => { if (alive) setStorms(s); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // live active cyclones when available, else the curated decorative set
+  const stormList = storms.length
+    ? storms.map((s) => ({ key: s.id, name: s.name, cat: s.categoryLabel }))
+    : STORMS.map((s) => ({ key: s.name, name: s.name, cat: s.cat }));
+
+  const spec = MODE_META[weatherMode];
+  const live = rows.filter((r) => spec.value(r) !== null);
+  const sorted = [...live].sort((a, b) => (spec.value(b) as number) - (spec.value(a) as number));
+  const top = sorted.slice(0, 3);
+  const coldest = weatherMode === 'temp' ? sorted.slice(-3).reverse() : [];
+  const anomalies = live.filter((r) => spec.state(r) === 'degraded' || spec.state(r) === 'disrupted');
+
   return (
     <div style={wrap}>
       <div style={{ fontSize: 13, fontWeight: 600, color: '#dfe7ee' }}>Meteorological</div>
-      <div style={{ fontSize: 11, color: 'var(--txt3)' }}>Surface temperature &amp; active storm systems</div>
+      <div style={{ fontSize: 11, color: 'var(--txt3)' }}>{spec.desc} &amp; active storm systems</div>
+
+      <div style={{ display: 'flex', gap: 6 }}>
+        {MODES.map((m) => (
+          <button key={m} className={`chip${weatherMode === m ? ' on' : ''}`} style={{ flex: 1, padding: '5px 0', fontSize: 11 }} onClick={() => setWeatherMode(m)}>
+            {MODE_META[m].label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {(['value', 'anomaly'] as const).map((v) => (
+          <button key={v} className={`chip${weatherView === v ? ' on' : ''}`} style={{ flex: 1, padding: '4px 0', fontSize: 10.5 }} onClick={() => setWeatherView(v)}>
+            {v === 'value' ? 'Value' : 'Anomaly'}
+          </button>
+        ))}
+      </div>
+
+      {live.length > 0 && (
+        <>
+          <div className="mono" style={{ fontSize: 10.5, color: 'var(--txt3)' }}>{live.length} countries reporting</div>
+          <Label>{spec.aggLabel} · {TOP_LABEL[weatherMode]}</Label>
+          {top.map((r) => <ValRow key={r.country} country={r.country} value={spec.fmt(spec.value(r) as number)} />)}
+          {coldest.length > 0 && (
+            <>
+              <Label>{spec.aggLabel} · coldest</Label>
+              {coldest.map((r) => <ValRow key={r.country} country={r.country} value={spec.fmt(spec.value(r) as number)} />)}
+            </>
+          )}
+          {anomalies.length > 0 && (
+            <>
+              <Label>Anomalies</Label>
+              {anomalies.slice(0, 6).map((r) => (
+                <div key={r.country} style={row}>
+                  <span className="mono" style={{ fontSize: 12, color: 'var(--txt)' }}>{r.country}</span>
+                  <span className="mono" style={{ fontSize: 11, color: stateVar(spec.state(r)) }}>{spec.state(r)} · {spec.fmt(spec.value(r) as number)}</span>
+                </div>
+              ))}
+            </>
+          )}
+        </>
+      )}
+
       <Label>Active storm systems</Label>
-      {STORMS.map((s) => (
-        <div key={s.name} style={row}>
+      {stormList.map((s) => (
+        <div key={s.key} style={row}>
           <span style={{ fontSize: 12, color: 'var(--txt)' }}>{s.name}</span>
           <span className="mono" style={{ fontSize: 11, color: 'var(--state-degraded)' }}>{s.cat}</span>
         </div>
       ))}
-      <Label>Temperature</Label>
-      <div style={{ height: 6, borderRadius: 3, background: 'linear-gradient(90deg,#3f6fc4,#4aa8c9,#57ab73,#cbb043,#d1863f,#cc5b52)' }} />
-      <div className="mono" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--txt3)' }}><span>−10°C</span><span>42°C</span></div>
+      <Label>{weatherView === 'anomaly' ? `${spec.label} · anomaly` : spec.label}</Label>
+      <div style={{ height: 6, borderRadius: 3, background: (weatherView === 'anomaly' ? ANOM_META[weatherMode].legend : spec.legend).css }} />
+      <div className="mono" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--txt3)' }}>
+        <span>{(weatherView === 'anomaly' ? ANOM_META[weatherMode].legend : spec.legend).lo}</span>
+        <span>{(weatherView === 'anomaly' ? ANOM_META[weatherMode].legend : spec.legend).hi}</span>
+      </div>
+
+      <Label>Atmosphere · cloud cover</Label>
+      <div style={{ height: 6, borderRadius: 3, background: 'linear-gradient(90deg,rgba(224,234,246,0),rgba(236,243,250,0.95))' }} />
+      <div className="mono" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--txt3)' }}><span>clear</span><span>overcast</span></div>
     </div>
   );
 }

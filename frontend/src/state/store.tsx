@@ -24,6 +24,8 @@ import {
   type IndView,
   type OverlayId,
   type View,
+  type WeatherMode,
+  type WeatherView,
 } from './types';
 
 const initialState: AppState = {
@@ -34,6 +36,8 @@ const initialState: AppState = {
   modal: null,
   industry: 'semis',
   indView: 'players',
+  weatherMode: 'temp',
+  weatherView: 'value',
   feedFilter: 'all',
   searchOpen: false,
   searchQ: '',
@@ -53,6 +57,8 @@ type Action =
   | { type: 'closeModal' }
   | { type: 'setIndustry'; id: string }
   | { type: 'setIndView'; v: IndView }
+  | { type: 'setWeatherMode'; v: WeatherMode }
+  | { type: 'setWeatherView'; v: WeatherView }
   | { type: 'setFeedFilter'; f: FeedFilter }
   | { type: 'toggleSearch' }
   | { type: 'setSearchQ'; q: string }
@@ -89,6 +95,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, industry: action.id };
     case 'setIndView':
       return { ...state, indView: action.v };
+    case 'setWeatherMode':
+      return { ...state, weatherMode: action.v };
+    case 'setWeatherView':
+      return { ...state, weatherView: action.v };
     case 'setFeedFilter':
       return { ...state, feedFilter: action.f };
     case 'toggleSearch':
@@ -160,6 +170,8 @@ export function useAppActions() {
       closeModal: () => dispatch({ type: 'closeModal' }),
       setIndustry: (id: string) => dispatch({ type: 'setIndustry', id }),
       setIndView: (v: IndView) => dispatch({ type: 'setIndView', v }),
+      setWeatherMode: (v: WeatherMode) => dispatch({ type: 'setWeatherMode', v }),
+      setWeatherView: (v: WeatherView) => dispatch({ type: 'setWeatherView', v }),
       setFeedFilter: (f: FeedFilter) => dispatch({ type: 'setFeedFilter', f }),
       toggleSearch: () => dispatch({ type: 'toggleSearch' }),
       setSearchQ: (q: string) => dispatch({ type: 'setSearchQ', q }),

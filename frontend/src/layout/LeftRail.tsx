@@ -14,6 +14,7 @@ import {
   IconEconomy,
   IconIndustry,
   IconMarkets,
+  IconNews,
   IconRelations,
   IconSat,
   IconSearch,
@@ -43,6 +44,7 @@ const HEALTH: { id: HealthMetric; title: string; icon: ReactNode }[] = [
   { id: 'economy', title: 'Economy', icon: <IconEconomy /> },
   { id: 'markets', title: 'Markets', icon: <IconMarkets /> },
   { id: 'conflict', title: 'Conflict', icon: <IconConflict /> },
+  { id: 'news', title: 'News', icon: <IconNews /> },
 ];
 
 const OVERLAYS: { id: OverlayId; title: string; icon: ReactNode }[] = [
