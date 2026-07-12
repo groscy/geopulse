@@ -63,6 +63,19 @@ Other tunables (all optional, with sensible defaults): `MARKETS_INTERVAL`,
 `GDELT_INTERVAL`, `SCORING_INTERVAL`, `FX_INTERVAL`, `MACRO_INTERVAL`,
 `MARKETS_BACKFILL_DAYS`. See [.env.example](.env.example).
 
+### Database password (optional)
+
+Postgres runs inside the container on localhost (never published) with a default
+password of `geopulse`. To set your own, pass `-e POSTGRES_PASSWORD=…` **on the
+first run** — Postgres only applies it while initializing the data volume, so
+change it before that volume exists:
+
+```sh
+docker run -d --name geopulse -p 8080:80 \
+  -e POSTGRES_PASSWORD=your_secret \
+  -v geopulse-data:/var/lib/postgresql/data geopulse
+```
+
 ### Manage it
 
 ```sh

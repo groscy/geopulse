@@ -21,15 +21,17 @@ RUN npm run build
 # ---- stage 2: runtime (Postgres + TimescaleDB + Python services + nginx) ----
 FROM timescale/timescaledb:latest-pg16
 
+# DB credentials are NOT set here: a secret in ENV is flagged by Docker's
+# SecretsUsedInArgOrEnv rule, and a baked DATABASE_URL can't follow an overridden
+# password. geopulse-entrypoint.sh fills POSTGRES_PASSWORD / DATABASE_URL in at
+# runtime (defaulting to geopulse, overridable with -e).
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
     MIGRATIONS_DIR=/app/db/migrations \
     POSTGRES_USER=geopulse \
-    POSTGRES_PASSWORD=geopulse \
     POSTGRES_DB=geopulse \
-    PGDATA=/var/lib/postgresql/data \
-    DATABASE_URL=postgresql://geopulse:geopulse@127.0.0.1:5432/geopulse
+    PGDATA=/var/lib/postgresql/data
 
 # Python runtime, web server, process supervisor.
 RUN apk add --no-cache python3 py3-pip nginx supervisor \
@@ -49,14 +51,16 @@ COPY --from=frontend /app/dist /srv/geopulse
 # Web + process management.
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisord.conf
+COPY docker/geopulse-entrypoint.sh /usr/local/bin/geopulse-entrypoint.sh
 COPY docker/geopulse-run.sh /usr/local/bin/geopulse-run.sh
 COPY docker/geopulse-migrate.sh /usr/local/bin/geopulse-migrate.sh
-RUN chmod +x /usr/local/bin/geopulse-run.sh /usr/local/bin/geopulse-migrate.sh
+RUN chmod +x /usr/local/bin/geopulse-entrypoint.sh /usr/local/bin/geopulse-run.sh /usr/local/bin/geopulse-migrate.sh
 
 # Only nginx is published; the API and DB stay on localhost inside the container.
 EXPOSE 80
 # Postgres data persists here — mount a volume to keep it across runs.
 VOLUME ["/var/lib/postgresql/data"]
 
-# Reset the base image's postgres entrypoint; supervisord is PID 1.
-ENTRYPOINT ["supervisord", "-c", "/etc/supervisord.conf"]
+# Reset the base image's postgres entrypoint. The wrapper sets the DB credential
+# defaults, then exec's supervisord as PID 1.
+ENTRYPOINT ["/usr/local/bin/geopulse-entrypoint.sh"]
