@@ -15,6 +15,7 @@ import {
 } from 'd3-geo';
 import type { Feature } from 'geojson';
 import { dataSource } from '../data/source';
+import { fetchWeather, fetchWeatherField, fetchStorms } from '../data/apiSource';
 import { RELATION_ARCS } from '../data/fixtures';
 import { INDUSTRIES, FLIGHT_ROUTES, ORBITS, STORMS } from '../data/overlays';
 import { useLive } from '../data/live';
@@ -22,21 +23,79 @@ import { useAppActions, useAppState } from '../state/store';
 import type { HealthMetric } from '../state/types';
 import { IDLE_ROTATION_DEG_PER_FRAME, shouldAnimate } from '../state/motion';
 import { lerpHex, stateColor, toneColor, type HealthState } from '../theme/colors';
+import { ANOM_META, MODE_META, TEMP_STOPS, anomalyColor, colorForStops, fmtZ, sampleField } from '../data/weather';
+import type { StormFeature, WeatherField, WeatherRow } from '../data/types';
 import { staleHatchPattern } from '../theme/patterns';
 import { stateLabel } from '../components/bits';
-import { COUNTRY_FEATURES, BORDERS, CENTROIDS, CENTROIDS_BY_NAME, featureName, isoForFeature } from './geo';
+import { COUNTRY_FEATURES, BORDERS, CENTROIDS, CENTROIDS_BY_NAME, LABEL_POINTS, featureName, isoForFeature } from './geo';
+import { CloudGL } from './clouds-gl';
 
-const TEMP_STOPS: [number, string][] = [
-  [-12, '#3f6fc4'], [4, '#4aa8c9'], [17, '#57ab73'], [25, '#cbb043'], [33, '#d1863f'], [42, '#cc5b52'],
-];
 const hash = (n: number) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
-function tempColor(lat: number, seed: number): string {
-  const temp = 31 - Math.abs(lat) * 0.72 + (hash(seed) - 0.5) * 9;
-  if (temp <= TEMP_STOPS[0][0]) return TEMP_STOPS[0][1];
-  for (let i = 1; i < TEMP_STOPS.length; i++) {
-    if (temp <= TEMP_STOPS[i][0]) return lerpHex(TEMP_STOPS[i - 1][1], TEMP_STOPS[i][1], (temp - TEMP_STOPS[i - 1][0]) / (TEMP_STOPS[i][0] - TEMP_STOPS[i - 1][0]));
+
+// Sub-solar point (lon, lat degrees) for an instant — the sun's ground position. Drives
+// both the day/night terminator and the volumetric cloud lighting (shared so they agree).
+function subSolarPoint(now: Date): [number, number] {
+  const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
+  const slon = ((-(utcH - 12) * 15) + 540) % 360 - 180;
+  const dayOfYear = (Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86400000;
+  const slat = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
+  return [slon, slat];
+}
+
+// Cached soft cloud-puff sprite (radial white gradient), drawn per grid node for the
+// atmospheric field shell — far cheaper than building a gradient every node every frame.
+let cloudSprite: HTMLCanvasElement | null = null;
+function cloudPuff(): HTMLCanvasElement {
+  if (cloudSprite) return cloudSprite;
+  const s = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  grad.addColorStop(0, 'rgba(236,243,250,0.95)');
+  grad.addColorStop(0.5, 'rgba(224,234,246,0.45)');
+  grad.addColorStop(1, 'rgba(224,234,246,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, s, s);
+  cloudSprite = c;
+  return c;
+}
+
+// ---- continuous cloud field (offscreen density texture) ----
+// A low-res offscreen canvas whose pixels are inverted back to lon/lat, sampled from the
+// interpolated cloud field, and modulated by value noise -> soft continuous masses.
+// Rebuilt on a throttle and cached, so the per-pixel work never blocks the 60fps globe.
+let cloudTex: { c: HTMLCanvasElement; g: CanvasRenderingContext2D; img: ImageData | null; frame: number } | null = null;
+function cloudCanvas(size: number) {
+  if (!cloudTex) {
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    cloudTex = { c, g: c.getContext('2d')!, img: null, frame: -999 };
   }
-  return TEMP_STOPS[TEMP_STOPS.length - 1][1];
+  return cloudTex;
+}
+// cheap 2D value noise + 3-octave fbm (0..1) for the cloud texture.
+function vnoise(x: number, y: number): number {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const h = (a: number, b: number) => { const n = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return n - Math.floor(n); };
+  const u = xf * xf * (3 - 2 * xf), w = yf * yf * (3 - 2 * yf);
+  return h(xi, yi) * (1 - u) * (1 - w) + h(xi + 1, yi) * u * (1 - w) + h(xi, yi + 1) * (1 - u) * w + h(xi + 1, yi + 1) * u * w;
+}
+function fbm(x: number, y: number): number {
+  return vnoise(x, y) * 0.6 + vnoise(x * 2.1 + 5, y * 2.1 + 5) * 0.3 + vnoise(x * 4.3 + 9, y * 4.3 + 9) * 0.1;
+}
+// Cloud render path. 'gpu' = WebGL2 raymarched volumetric shell (default when the GPU
+// path is available); it degrades to 'canvas' — the retained continuous canvas-2D texture
+// — when WebGL2 is absent or its context is lost. 'off' draws no cloud layer. The 'canvas'
+// branch itself still supports a deeper sprite-puff fallback (CLOUD_CANVAS_SPRITES).
+type CloudMode = 'gpu' | 'canvas' | 'off';
+const CLOUD_MODE: CloudMode = 'gpu';
+const CLOUD_CANVAS_SPRITES = false; // within the canvas path: false = continuous texture, true = sprite puffs
+// synthetic latitude-derived temperature — the fallback when no live weather data
+// is available for a country (fixtures/demo, or the weather feed is empty). Only
+// Temperature mode has such an analog; precip/wind render live-data-only.
+function tempColor(lat: number, seed: number): string {
+  return colorForStops(31 - Math.abs(lat) * 0.72 + (hash(seed) - 0.5) * 9, TEMP_STOPS);
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE as string | undefined;
@@ -50,7 +109,7 @@ export function Globe() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const { tiles } = useLive();
-  const { selected, autoRotate, reduceMotion, overlays, domain, industry, indView } = useAppState();
+  const { selected, autoRotate, reduceMotion, overlays, domain, industry, indView, weatherMode, weatherView } = useAppState();
   const { select } = useAppActions();
   const [hover, setHover] = useState<Hover | null>(null);
 
@@ -60,10 +119,15 @@ export function Globe() {
   const drag = useRef<{ x: number; y: number; moved: number } | null>(null);
   const size = useRef({ w: 0, h: 0, dpr: 1 });
   const arcs = useRef<Arc[]>(RELATION_ARCS);
+  const weather = useRef<Map<string, WeatherRow>>(new Map()); // ISO-3 -> all three facets
+  const field = useRef<WeatherField | null>(null); // ambient atmospheric grid (cloud layer)
+  const storms = useRef<StormFeature[]>([]); // live cyclones (real spirals + tracks)
   const selDomainState = useRef<HealthState | null>(null);
+  const cloudBitmap = useRef<ImageBitmap | null>(null); // last GPU cloud frame (reused when idle)
+  const cloudKey = useRef<string>(''); // camera/time/field signature of cloudBitmap
 
-  const live = useRef({ tiles, selected, autoRotate, reduceMotion, overlays, domain, industry, indView });
-  live.current = { tiles, selected, autoRotate, reduceMotion, overlays, domain, industry, indView };
+  const live = useRef({ tiles, selected, autoRotate, reduceMotion, overlays, domain, industry, indView, weatherMode, weatherView });
+  live.current = { tiles, selected, autoRotate, reduceMotion, overlays, domain, industry, indView, weatherMode, weatherView };
 
   // arcs: from the API (or fixtures)
   useEffect(() => {
@@ -75,12 +139,56 @@ export function Globe() {
     return () => { alive = false; window.clearInterval(id); };
   }, []);
 
+  // weather: per-country facet aggregates (temp/precip/wind) for the data-backed
+  // Meteorological overlay. One fetch holds all three facets, so switching the
+  // overlay mode never refetches. Absent in fixtures/demo (no API_BASE) => temp
+  // keeps its latitude tint and precip/wind render empty.
+  useEffect(() => {
+    if (!API_BASE) return;
+    let alive = true;
+    const load = () => fetchWeather(API_BASE)
+      .then((rows) => {
+        if (!alive) return;
+        const m = new Map<string, WeatherRow>();
+        for (const r of rows) m.set(r.country, r);
+        weather.current = m;
+      }).catch(() => {});
+    load();
+    const id = window.setInterval(load, 60000);
+    return () => { alive = false; window.clearInterval(id); };
+  }, []);
+
+  // atmospheric field: the ambient global cloud/wind grid for the lifted shell.
+  // Slow-moving field, cached server-side; refetch occasionally. Empty in fixtures/demo
+  // (no API_BASE) => the shell simply renders nothing (honest empty state).
+  useEffect(() => {
+    if (!API_BASE) return;
+    let alive = true;
+    const load = () => fetchWeatherField(API_BASE)
+      .then((f) => { if (alive) field.current = f; }).catch(() => {});
+    load();
+    const id = window.setInterval(load, 300000); // 5 min — field drifts slowly
+    return () => { alive = false; window.clearInterval(id); };
+  }, []);
+
+  // storms: live active cyclones (real position/category/track). Empty in fixtures/demo
+  // (no API_BASE) => the overlay falls back to the curated decorative spirals.
+  useEffect(() => {
+    if (!API_BASE) return;
+    let alive = true;
+    const load = () => fetchStorms(API_BASE)
+      .then((s) => { if (alive) storms.current = s; }).catch(() => {});
+    load();
+    const id = window.setInterval(load, 300000); // 5 min — advisories refresh slowly
+    return () => { alive = false; window.clearInterval(id); };
+  }, []);
+
   // selected country's chosen-domain state (Health single-select coloring)
   useEffect(() => {
     if (!selected || domain === 'composite') { selDomainState.current = null; return; }
     let alive = true;
-    const key: Record<HealthMetric, 'economy' | 'markets' | 'relations' | null> = {
-      composite: null, economy: 'economy', markets: 'markets', conflict: null,
+    const key: Record<HealthMetric, 'economy' | 'markets' | 'relations' | 'news' | null> = {
+      composite: null, economy: 'economy', markets: 'markets', conflict: null, news: 'news',
     };
     const dk = key[domain];
     if (!dk) { selDomainState.current = 'stale'; return; }
@@ -98,6 +206,13 @@ export function Globe() {
     const projection = geoOrthographic().clipAngle(90);
     const arcProj = geoOrthographic().clipAngle(180); // unclipped: far-side points still project
     const path = geoPath(projection, ctx);
+
+    // GPU cloud renderer (WebGL2). null when unavailable => the canvas-2D path is used.
+    // Guarded so a GL setup failure can never abort the globe render (fallback, not crash).
+    let cloudGL: CloudGL | null = null;
+    if (CLOUD_MODE !== 'off') {
+      try { cloudGL = CloudGL.create(); } catch (e) { console.error('[globe] CloudGL.create threw', e); }
+    }
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -171,7 +286,7 @@ export function Globe() {
       frame += 1;
       const time = frame / 60;
       const { w, h, dpr } = size.current;
-      const { selected: sel, autoRotate: auto, reduceMotion: rm, overlays: ov, domain: dom } = live.current;
+      const { selected: sel, autoRotate: auto, reduceMotion: rm, overlays: ov, domain: dom, weatherMode: wmode, weatherView: wview } = live.current;
       const states = tileState();
       const animate = shouldAnimate(rm);
 
@@ -236,13 +351,37 @@ export function Globe() {
         ctx.fill();
       }
 
-      // meteorological: temperature choropleth (tint land), alpha .58
+      // meteorological: mode-aware choropleth (tint land), alpha .58. The Value view
+      // paints each country by its facet aggregate on that facet's scale (temperature
+      // keeps a latitude fallback; precip/wind render only where live data exists). The
+      // Anomaly view paints by the facet's per-country z on a diverging (temp) or
+      // high-tail (precip/wind) scale, live-data-only (stale => no fill).
       if (ov.weather) {
+        const spec = MODE_META[wmode];
+        const anom = wview === 'anomaly';
         ctx.globalAlpha = 0.58;
+        const wx = weather.current;
         for (let i = 0; i < COUNTRY_FEATURES.length; i++) {
           const f = COUNTRY_FEATURES[i];
-          const c = CENTROIDS[isoForFeature(f) ?? ''] ?? (geoCentroid(f) as [number, number]);
-          ctx.beginPath(); path(f); ctx.fillStyle = tempColor(c[1], i); ctx.fill();
+          const iso = isoForFeature(f);
+          const row = iso ? wx.get(iso) : undefined;
+          if (anom) {
+            const z = row ? row.z[wmode] : null;
+            const col = z === null || z === undefined ? null : anomalyColor(z, wmode);
+            if (col) { ctx.beginPath(); path(f); ctx.fillStyle = col; ctx.fill(); }
+            continue; // no synthetic anomaly fallback (stale / low tail -> no fill)
+          }
+          const v = row ? spec.value(row) : null;
+          if (v !== null && v !== undefined) {
+            ctx.beginPath(); path(f);
+            ctx.fillStyle = colorForStops(v, spec.stops);
+            ctx.fill();
+          } else if (spec.fallback) {
+            ctx.beginPath(); path(f);
+            const c = CENTROIDS[iso ?? ''] ?? (geoCentroid(f) as [number, number]);
+            ctx.fillStyle = tempColor(c[1], i);
+            ctx.fill();
+          }
         }
         ctx.globalAlpha = 1;
       }
@@ -252,11 +391,7 @@ export function Globe() {
 
       // day / night: terminator via geoCircle at the anti-solar point + meridians (no sun marker)
       if (ov.sun) {
-        const now = new Date();
-        const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
-        let slon = ((-(utcH - 12) * 15) + 540) % 360 - 180;
-        const dayOfYear = (Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86400000;
-        const slat = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
+        const [slon, slat] = subSolarPoint(new Date());
         const anti: [number, number] = [((slon + 180 + 540) % 360) - 180, -slat];
         ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 0.6;
         for (let lon = -180; lon < 180; lon += 15) {
@@ -327,21 +462,159 @@ export function Globe() {
         }
       }
 
-      // meteorological: rotating storm spirals
+      // meteorological: rotating storm spirals — live cyclones (real position, category-
+      // scaled, with a near-term forecast track) when available, else the curated
+      // decorative set. Spin follows the hemisphere (cyclonic: CCW north, CW south).
       if (ov.weather) {
-        STORMS.forEach((s, si) => {
+        const live = storms.current;
+        const list = live.length
+          ? live.map((s) => ({ lon: s.lon, lat: s.lat, spin: s.lat >= 0 ? 1 : -1, size: 1 + s.category * 0.18, track: s.track }))
+          : STORMS.map((s) => ({ lon: s.lon, lat: s.lat, spin: s.spin, size: 1, track: [] as [number, number][] }));
+        list.forEach((s, si) => {
           const ll: [number, number] = [s.lon, s.lat]; if (!visible(ll)) return;
           const p = projection(ll); if (!p) return;
+          if (s.track.length) {  // near-term forecast track (live storms only)
+            ctx.beginPath(); let started = false;
+            for (const tp of [[s.lon, s.lat] as [number, number], ...s.track]) {
+              if (!visible(tp)) { started = false; continue; }
+              const q = projection(tp); if (!q) { started = false; continue; }
+              if (!started) { ctx.moveTo(q[0], q[1]); started = true; } else ctx.lineTo(q[0], q[1]);
+            }
+            ctx.strokeStyle = 'rgba(196,218,238,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+          }
           ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate((animate ? time : 0) * 0.7 * s.spin + si);
           ctx.strokeStyle = 'rgba(196,218,238,0.6)'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
           for (let arm = 0; arm < 2; arm++) {
             ctx.beginPath();
-            for (let a = 0; a <= 60; a++) { const ang = a / 60 * Math.PI * 2.4 + arm * Math.PI; const rr = 1.6 + a / 60 * 16; const x = Math.cos(ang) * rr, y = Math.sin(ang) * rr; if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+            for (let a = 0; a <= 60; a++) { const ang = a / 60 * Math.PI * 2.4 + arm * Math.PI; const rr = (1.6 + a / 60 * 16) * s.size; const x = Math.cos(ang) * rr, y = Math.sin(ang) * rr; if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
             ctx.stroke();
           }
           ctx.beginPath(); ctx.arc(0, 0, 2.1, 0, Math.PI * 2); ctx.fillStyle = 'rgba(235,243,251,0.95)'; ctx.fill();
           ctx.restore();
         });
+      }
+
+      // meteorological: atmospheric field shell — a VOLUMETRIC cloud layer. The GPU path
+      // (WebGL2) raymarches a thin cloud shell above the surface: coverage (where/how much)
+      // from the interpolated field, volume (the form) from baked worley-perlin 3D noise,
+      // sun-lit and standing over the limb. It degrades to the retained canvas-2D continuous
+      // texture (interpolated field × noise) when WebGL2 is unavailable / context-lost, and
+      // to sprite puffs beneath that. Ambient/decorative; renders nothing without live data.
+      const fld = field.current;
+      if (ov.weather && fld && fld.nlon > 0) {
+        // GPU path: a WebGL2 raymarched volumetric shell, coverage from the field and
+        // volume from baked noise, sun-lit, composited here (labels/storms stay above).
+        // Re-raymarched only on camera/time/field change; the cached bitmap is redrawn
+        // on idle frames. Degrades to the canvas-2D path when unavailable / context-lost.
+        const useGpu = CLOUD_MODE === 'gpu' && cloudGL != null && cloudGL.ready && !cloudGL.lost;
+        if (useGpu) {
+          cloudGL!.setField(fld);
+          const [slon, slat] = subSolarPoint(new Date());
+          const tBucket = animate ? Math.floor(time * 12) : 0; // ~12 rebuilds/s when animating
+          const key = `${rot.current.lambda.toFixed(2)}:${rot.current.phi.toFixed(2)}:${zoom.current.toFixed(3)}:${tBucket}:${fld.ts ?? ''}`;
+          if (key !== cloudKey.current) {
+            cloudKey.current = key;
+            const bmp = cloudGL!.render({
+              w, h, dpr, cx, cy, R, lambda: rot.current.lambda, phi: rot.current.phi,
+              sunLon: slon, sunLat: slat, time, animate,
+            });
+            if (bmp) cloudBitmap.current = bmp;
+          }
+          if (cloudBitmap.current) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.drawImage(cloudBitmap.current, 0, 0, w, h);
+          }
+        } else if (CLOUD_MODE !== 'off' && !CLOUD_CANVAS_SPRITES) {
+          const TS = 112;
+          const tex = cloudCanvas(TS);
+          if (frame - tex.frame >= 3) {            // throttle rebuild (~20fps), cache between
+            tex.frame = frame;
+            if (!tex.img) tex.img = tex.g.createImageData(TS, TS);
+            const data = tex.img.data;
+            data.fill(0);
+            const phase = animate ? time : 0;
+            const inv = projection.invert;
+            for (let j = 0; j < TS; j++) {
+              const sy = cy - R + ((j + 0.5) / TS) * 2 * R;
+              for (let i = 0; i < TS; i++) {
+                const sx = cx - R + ((i + 0.5) / TS) * 2 * R;
+                const rr = Math.hypot(sx - cx, sy - cy) / R;
+                if (rr > 1) continue;              // outside the globe disc
+                const ll = inv ? inv([sx, sy]) : null;
+                if (!ll) continue;                 // far hemisphere / off-globe
+                const cloud = sampleField(fld, ll[0], ll[1], 'cloud');
+                if (cloud === null || cloud < 12) continue;
+                const n = fbm(ll[0] * 0.05 + phase * 0.012, ll[1] * 0.05);
+                const limb = rr > 0.9 ? Math.max(0, (1 - rr) / 0.1) : 1;
+                const a = (cloud / 100) * (0.28 + 0.6 * n) * limb;
+                if (a <= 0.02) continue;
+                const p = sampleField(fld, ll[0], ll[1], 'precip') ?? 0;
+                const dark = p > 0.4 ? 0.8 : 1;    // subtle rain emphasis
+                const idx = (j * TS + i) * 4;
+                data[idx] = 236 * dark; data[idx + 1] = 243 * dark; data[idx + 2] = 250 * dark;
+                data[idx + 3] = Math.min(180, a * 255);
+              }
+            }
+            tex.g.putImageData(tex.img, 0, 0);
+          }
+          ctx.globalAlpha = 1;
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(tex.c, cx - R, cy - R, 2 * R, 2 * R);
+        } else if (CLOUD_MODE !== 'off' && CLOUD_CANVAS_SPRITES) {
+          // deepest fallback: soft sprite puffs sampled from the packed grid nodes
+          const puff = cloudPuff();
+          for (let jl = 0; jl < fld.nlat; jl++) for (let il = 0; il < fld.nlon; il++) {
+            const cloud = fld.cloud[jl * fld.nlon + il];
+            if (cloud === null || cloud < 22) continue;
+            const ll: [number, number] = [-180 + il * fld.step, fld.latMin + jl * fld.step];
+            if (!visible(ll)) continue;
+            const pt = lift(ll, 1.035); if (!pt) continue;
+            const r = scale * (0.10 + 0.055 * (cloud / 100));
+            ctx.globalAlpha = Math.min(0.6, 0.08 + ((cloud - 22) / 78) * 0.52);
+            ctx.drawImage(puff, pt[0] - r, pt[1] - r, r * 2, r * 2);
+          }
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      // meteorological: numeric value labels for the active mode with size-based
+      // LOD. A country's label fades in only once its on-screen footprint is wide
+      // enough to host the text, so smaller countries reveal their value as you zoom
+      // in. Live data only, for the active mode's facet — labels are never shown for
+      // the synthetic latitude fallback, nor in precip/wind mode without live data.
+      if (ov.weather && weather.current.size) {
+        const spec = MODE_META[wmode];
+        const anom = wview === 'anomaly';
+        const wx = weather.current;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '600 11px "IBM Plex Mono", monospace';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        for (const f of COUNTRY_FEATURES) {
+          const iso = isoForFeature(f);
+          if (!iso) continue;
+          const row = wx.get(iso);
+          const v = anom ? (row ? row.z[wmode] : null) : (row ? spec.value(row) : null);
+          if (v === null || v === undefined) continue;
+          if (anom && !ANOM_META[wmode].diverging && v <= 0) continue; // one-sided low tail: no label
+          const ll = LABEL_POINTS[iso] ?? (geoCentroid(f) as [number, number]);
+          if (!visible(ll)) continue;
+          const b = path.bounds(f); // on-screen bbox of the (near-hemisphere) country
+          const bw = b[1][0] - b[0][0], bh = b[1][1] - b[0][1];
+          if (!isFinite(bw) || !isFinite(bh) || bh < 12) continue; // need vertical room
+          const alpha = Math.min(1, (bw - 20) / 16); // LOD: fade in over 20→36px width
+          if (alpha < 0.05) continue;                // too small on screen — zoom to reveal
+          const p = projection(ll);
+          if (!p) continue;
+          const label = anom ? fmtZ(v) : spec.fmt(v);
+          ctx.globalAlpha = alpha;
+          ctx.strokeStyle = 'rgba(6,10,15,0.78)';
+          ctx.strokeText(label, p[0], p[1]);
+          ctx.fillStyle = '#eef4f9';
+          ctx.fillText(label, p[0], p[1]);
+        }
+        ctx.globalAlpha = 1;
       }
 
       // selected outline
@@ -409,6 +682,8 @@ export function Globe() {
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      cloudGL?.dispose();
+      if (cloudBitmap.current) { cloudBitmap.current.close(); cloudBitmap.current = null; }
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);
