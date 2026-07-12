@@ -1,0 +1,65 @@
+name: Release image
+
+# Builds the all-in-one GeoPulse image and pushes it to the GitHub Container
+# Registry (GHCR). Two ways to trigger:
+#   * push a version tag  ->  git tag v1.2.3 && git push origin v1.2.3
+#       publishes  :1.2.3  :1.2  :latest
+#   * run manually        ->  Actions tab -> "Release image" -> Run workflow
+#       publishes  :<branch>  :sha-<short>
+#
+# The image name is derived from the repo: ghcr.io/<owner>/<repo> (lowercased).
+# First publish creates a PRIVATE package — make it public once under the
+# package's settings on GitHub so `docker run` works without `docker login`.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          # metadata-action lowercases the image name for us.
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Reuse layers across runs so rebuilds of the ~1.5 GB image are fast.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

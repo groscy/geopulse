@@ -11,7 +11,22 @@ turns them into per-country risk states, and a React globe visualizes them live.
 ## Run it — single all-in-one image
 
 Everything (database, workers, scoring engine, API, and web UI) ships in **one
-container image**. It needs no external services; just build and run.
+container image**. It needs no external services — pull the published image, or
+build from source.
+
+### Pull the prebuilt image (fastest)
+
+Published to GitHub Container Registry on every release, so there's nothing to build:
+
+```sh
+docker run -d --name geopulse -p 8080:80 \
+  -v geopulse-data:/var/lib/postgresql/data \
+  ghcr.io/groscy/geopulse:latest
+```
+
+Podman works the same way (`podman run ...`). Then open **http://localhost:8080**.
+
+### Build from source
 
 ```sh
 # Docker
@@ -89,3 +104,16 @@ config, and the frontend has its own Vite dev server:
 docker compose up --build          # full stack, service-per-container
 npm --prefix frontend run dev      # frontend only, against a running API
 ```
+
+### Publishing a release
+
+Pushing a version tag builds the all-in-one image and publishes it to GHCR (see
+[.github/workflows/release.yml](.github/workflows/release.yml)):
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0             # -> ghcr.io/groscy/geopulse:0.1.0, :0.1, :latest
+```
+
+The **first** publish creates a private package; make it public once under the
+package's settings on GitHub so `docker run` works without `docker login`.
