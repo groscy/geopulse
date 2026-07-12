@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from 'react';
 import { dataSource } from './source';
-import type { CountryDetail, Tile } from './types';
+import type { CountryDetail, DomainKey, DomainTile, Tile } from './types';
 
 /**
  * Poll tiles on an interval (task 8.6). With fixtures this is effectively
@@ -37,6 +37,23 @@ export function useCountries(): CountryDetail[] {
       alive = false;
     };
   }, []);
+  return rows;
+}
+
+/**
+ * Per-country state for one Health domain — the global breakdown behind the
+ * HealthPanel. Refetches when the selected domain changes; degrades to an empty
+ * list (never throws) if the backend predates GET /api/domain-tiles.
+ */
+export function useDomainTiles(domain: DomainKey): DomainTile[] {
+  const [rows, setRows] = useState<DomainTile[]>([]);
+  useEffect(() => {
+    let alive = true;
+    dataSource.domainTiles(domain)
+      .then((r) => { if (alive) setRows(r); })
+      .catch(() => { if (alive) setRows([]); });
+    return () => { alive = false; };
+  }, [domain]);
   return rows;
 }
 
