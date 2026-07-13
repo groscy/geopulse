@@ -138,7 +138,10 @@ vec3 stormField(vec3 dir) {
     vec3 e = normalize(cross(vec3(0.0, 0.0, 1.0), c));  // east at the storm center
     vec3 n = cross(c, e);                               // north
     float th = atan(dot(dir, e), dot(dir, n));          // bearing around the eye
-    float a = uStormSpin[i] * (th + uStormOmega * uTime) + uStormPhase0[i];
+    // spin mirrors the band chirality (spin*th); the time term stays OUTSIDE the
+    // spin factor so rotation sense reverses by hemisphere (N: CCW, S: CW) instead
+    // of cancelling — spin*(omega*t)/spin would be hemisphere-independent.
+    float a = uStormSpin[i] * th + uStormOmega * uTime + uStormPhase0[i];
     vec4 t = texture(uHurricane, vec2(a / (2.0 * PI), r));   // R band/eyewall, G height, B eye-mask
     add += t.r * uStormDensity[i];
     eyeMask = min(eyeMask, t.b);                        // carve the calm eye out of field cloud

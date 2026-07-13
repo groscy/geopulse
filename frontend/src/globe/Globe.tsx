@@ -274,9 +274,11 @@ export function Globe() {
         }
       }
     };
-    // relation arc: resolve centroids by ISO-3 and color by tone
+    // relation arc: resolve endpoints by ISO-3 and color by tone. Anchor at LABEL_POINTS
+    // (largest-polygon centroid = mainland) not CENTROIDS: France/USA/Norway etc. have
+    // overseas territories that drag the whole-geometry centroid into the ocean.
     const drawArc = (a: string, b: string, tone: number, cx: number, cy: number, R: number, center: [number, number], time: number, flow: boolean) => {
-      const pa = CENTROIDS[a], pb = CENTROIDS[b];
+      const pa = LABEL_POINTS[a] ?? CENTROIDS[a], pb = LABEL_POINTS[b] ?? CENTROIDS[b];
       if (pa && pb) drawArcPts(pa, pb, toneColor(tone), cx, cy, R, center, time, flow);
     };
 
