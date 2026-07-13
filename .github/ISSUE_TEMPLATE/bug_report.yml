@@ -1,0 +1,68 @@
+name: Bug report
+description: Report something that isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug! Please search
+        [existing issues](https://github.com/groscy/geopulse/issues) first to
+        avoid duplicates.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including what you expected instead.
+      placeholder: The globe fails to load and the console shows…
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce it?
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Frontend (globe / UI)
+        - API
+        - Ingestion worker
+        - Scoring engine
+        - Database / migrations
+        - Container / deployment
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / image tag or commit
+      placeholder: "ghcr.io/groscy/geopulse:latest, or commit sha"
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How are you running it?
+      options:
+        - All-in-one image (docker run)
+        - All-in-one image (podman run)
+        - docker compose / podman compose
+        - Frontend dev server (vite)
+        - From source, other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Container logs (`docker logs geopulse`) or browser console output. Automatically formatted as code.
+      render: shell
