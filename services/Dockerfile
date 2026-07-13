@@ -1,7 +1,7 @@
 # Shared image for all Python services (workers, scoring, api, migrate).
 # Build context is the REPO ROOT so we can bake db/migrations into the image
 # (avoids runtime bind mounts, which are unreliable on Podman/WSL on Windows).
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
