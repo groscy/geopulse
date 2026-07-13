@@ -8,7 +8,7 @@
 # Then open http://localhost:8080  (add -e TWELVE_DATA_KEY=... for live market data).
 
 # ---- stage 1: build the Vite frontend ----
-FROM node:20-alpine AS frontend
+FROM node:26-alpine AS frontend
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
