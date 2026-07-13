@@ -1,20 +1,15 @@
 /*
- * Left rail — capability: app-shell (task 2.3). Search toggle, single-select
- * Health group, independent Overlay toggles, pinned Methodology + Settings.
+ * Left rail — capability: app-shell (task 2.3). Search toggle, independent
+ * Overlay toggles, pinned Methodology + Settings.
  * Active = 3px emerald edge-bar (.rail-btn.active in layout.css) + icon brighten.
  */
 import type { ReactNode } from 'react';
 import { useAppActions, useAppState } from '../state/store';
-import type { HealthMetric, OverlayId } from '../state/types';
+import type { OverlayId } from '../state/types';
 import {
   IconAir,
   IconBook,
-  IconComposite,
-  IconConflict,
-  IconEconomy,
   IconIndustry,
-  IconMarkets,
-  IconNews,
   IconRelations,
   IconSat,
   IconSearch,
@@ -39,14 +34,6 @@ function GroupLabel({ children }: { children: ReactNode }) {
   );
 }
 
-const HEALTH: { id: HealthMetric; title: string; icon: ReactNode }[] = [
-  { id: 'composite', title: 'Composite', icon: <IconComposite /> },
-  { id: 'economy', title: 'Economy', icon: <IconEconomy /> },
-  { id: 'markets', title: 'Markets', icon: <IconMarkets /> },
-  { id: 'conflict', title: 'Conflict', icon: <IconConflict /> },
-  { id: 'news', title: 'News', icon: <IconNews /> },
-];
-
 const OVERLAYS: { id: OverlayId; title: string; icon: ReactNode }[] = [
   { id: 'relations', title: 'Relations', icon: <IconRelations /> },
   { id: 'industry', title: 'Industries', icon: <IconIndustry /> },
@@ -57,8 +44,8 @@ const OVERLAYS: { id: OverlayId; title: string; icon: ReactNode }[] = [
 ];
 
 export function LeftRail({ onOpenSettings }: { onOpenSettings: () => void }) {
-  const { domain, overlays, searchOpen, view } = useAppState();
-  const { setDomain, toggleOverlay, toggleSearch, setView } = useAppActions();
+  const { overlays, searchOpen, view } = useAppState();
+  const { toggleOverlay, toggleSearch, setView } = useAppActions();
 
   return (
     <nav
@@ -76,12 +63,6 @@ export function LeftRail({ onOpenSettings }: { onOpenSettings: () => void }) {
       </RailBtn>
 
       <div className="panel-scroll" style={{ flex: 1 }}>
-        <GroupLabel>Health</GroupLabel>
-        {HEALTH.map((h) => (
-          <RailBtn key={h.id} active={domain === h.id} onClick={() => setDomain(h.id)} title={h.title}>
-            {h.icon}
-          </RailBtn>
-        ))}
         <GroupLabel>Overlays</GroupLabel>
         {OVERLAYS.map((o) => (
           <RailBtn key={o.id} active={overlays[o.id]} onClick={() => toggleOverlay(o.id)} title={o.title}>

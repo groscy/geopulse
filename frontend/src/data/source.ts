@@ -7,7 +7,7 @@
  */
 import { COUNTRIES } from './fixtures';
 import { makeApiSource } from './apiSource';
-import type { CountryDetail, DataSource, DomainKey, DomainTile, Incident, IncidentDetail, Tile } from './types';
+import type { CountryDetail, DataSource, Incident, IncidentDetail, Tile } from './types';
 
 // design-system demo: synthesize incidents from the non-operational fixtures.
 function fixtureIncidents(): Incident[] {
@@ -34,13 +34,6 @@ export const fixtureSource: DataSource = {
   },
   async countries(): Promise<CountryDetail[]> {
     return COUNTRIES;
-  },
-  async domainTiles(domain: DomainKey): Promise<DomainTile[]> {
-    return COUNTRIES.map((c) => ({
-      iso3: c.iso3,
-      name: c.name,
-      state: domain === 'composite' ? c.composite : c.domains[domain],
-    }));
   },
   async incidents(status): Promise<Incident[]> {
     const all = fixtureIncidents();

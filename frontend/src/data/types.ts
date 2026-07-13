@@ -16,17 +16,6 @@ export interface Tile {
   computedAt: string;
 }
 
-/** Health single-select domain that owns a per-country score (`relations` == the
- * UI's "conflict" metric). The globe/panel domain keys, minus the standalone facets. */
-export type DomainKey = 'composite' | 'economy' | 'markets' | 'relations' | 'news';
-
-/** One country's committed state for a single domain — mirrors GET /api/domain-tiles. */
-export interface DomainTile {
-  iso3: string;
-  name: string;
-  state: HealthState;
-}
-
 /** Switchable Meteorological overlay mode — the facet the choropleth paints. */
 export type WeatherMode = 'temp' | 'precip' | 'wind';
 
@@ -187,9 +176,6 @@ export interface DataSource {
   tiles(): Promise<Tile[]>;
   country(iso3: string): Promise<CountryDetail | null>;
   countries(): Promise<CountryDetail[]>;
-  /** Per-country state for one Health domain (global breakdown). Empty when the
-   * backend predates the endpoint — callers degrade, they never crash. */
-  domainTiles(domain: DomainKey): Promise<DomainTile[]>;
   incidents(status: 'all' | 'ongoing' | 'resolved'): Promise<Incident[]>;
   incident(id: string): Promise<IncidentDetail | null>;
 }

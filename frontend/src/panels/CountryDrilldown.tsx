@@ -3,18 +3,9 @@
  * together (design-system verification task 18/19). Full live behavior
  * (sparklines from live series, active incidents, SSE) is M2 country-drilldown.
  */
-import { useEffect, useRef, type CSSProperties } from 'react';
 import { Flag, Sparkline, StateDot, stateLabel, stateVar } from '../components/bits';
 import type { CountryDetail, MetricRow } from '../data/types';
 import { useAppActions } from '../state/store';
-import type { HealthMetric } from '../state/types';
-
-// Health metric -> which drilldown domain chip it emphasizes (composite -> the
-// banner, news -> the News section, both handled inline).
-const HIGHLIGHT_CHIP: Partial<Record<HealthMetric, 'economy' | 'markets' | 'relations'>> = {
-  economy: 'economy', markets: 'markets', conflict: 'relations',
-};
-const ring = (on: boolean): CSSProperties => (on ? { outline: '2px solid var(--accent)', outlineOffset: 3 } : {});
 
 function ageText(min: number | null): string {
   if (min == null) return 'stale';
@@ -43,17 +34,13 @@ function MetricLine({ m }: { m: MetricRow }) {
   );
 }
 
-export function CountryDrilldown({ c, highlight }: { c: CountryDetail; highlight?: HealthMetric }) {
+export function CountryDrilldown({ c }: { c: CountryDetail }) {
   const { select, openModal } = useAppActions();
   const domains: { key: keyof CountryDetail['domains']; label: string }[] = [
     { key: 'economy', label: 'Economy' },
     { key: 'markets', label: 'Markets' },
     { key: 'relations', label: 'Relations' },
   ];
-  const chipHi = highlight ? HIGHLIGHT_CHIP[highlight] : undefined;
-  // scroll the highlighted section into view when the metric or country changes.
-  const hlRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { hlRef.current?.scrollIntoView({ block: 'nearest' }); }, [highlight, c.iso3]);
 
   return (
     <div style={{ padding: 'var(--pad-panel)', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -72,7 +59,6 @@ export function CountryDrilldown({ c, highlight }: { c: CountryDetail; highlight
 
       {/* composite banner */}
       <div
-        ref={highlight === 'composite' ? hlRef : undefined}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -81,7 +67,6 @@ export function CountryDrilldown({ c, highlight }: { c: CountryDetail; highlight
           borderRadius: 'var(--r-card)',
           background: `color-mix(in srgb, ${stateVar(c.composite)} 12%, var(--panel2))`,
           border: `1px solid color-mix(in srgb, ${stateVar(c.composite)} 40%, transparent)`,
-          ...ring(highlight === 'composite'),
         }}
       >
         <StateDot state={c.composite} glow size={11} />
@@ -96,9 +81,8 @@ export function CountryDrilldown({ c, highlight }: { c: CountryDetail; highlight
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
         {domains.map((d) => {
           const st = c.domains[d.key];
-          const hi = chipHi === d.key;
           return (
-            <div key={d.key} ref={hi ? hlRef : undefined} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--panel2)', border: '1px solid var(--line2)', ...ring(hi) }}>
+            <div key={d.key} style={{ padding: '8px 10px', borderRadius: 8, background: 'var(--panel2)', border: '1px solid var(--line2)' }}>
               <div className="section-label" style={{ marginBottom: 4 }}>{d.label}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <StateDot state={st} />
@@ -118,7 +102,7 @@ export function CountryDrilldown({ c, highlight }: { c: CountryDetail; highlight
       </div>
 
       {/* news domain — standalone, informational; never feeds the composite */}
-      <div ref={highlight === 'news' ? hlRef : undefined} style={ring(highlight === 'news')}>
+      <div>
         <div className="section-label" style={{ marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <span>News</span>
           <span className="mono" style={{ fontSize: 9.5, color: 'var(--txt3)', textTransform: 'none', letterSpacing: 0 }}>standalone · not in composite</span>

@@ -5,7 +5,7 @@
  * shapes. Selected in data/source.ts when VITE_API_BASE is set.
  */
 import type {
-  ActiveIncident, CountryDetail, DataSource, DomainKey, DomainTile, FieldCell, HealthState, Incident, IncidentDetail, MetricRow, Relation, StormFeature, Tile, WeatherField, WeatherRow,
+  ActiveIncident, CountryDetail, DataSource, FieldCell, HealthState, Incident, IncidentDetail, MetricRow, Relation, StormFeature, Tile, WeatherField, WeatherRow,
 } from './types';
 
 const STANDARD_METRICS: { key: string; label: string }[] = [
@@ -195,15 +195,6 @@ export function makeApiSource(base: string): DataSource {
     return (await res.json()) as IncidentDetail;
   }
 
-  async function domainTiles(domain: DomainKey): Promise<DomainTile[]> {
-    // Older backends (pre-/api/domain-tiles) 404 here; degrade to an empty list so
-    // the panel shows an honest empty state instead of crashing (indep. deploy).
-    const res = await fetch(url(`/api/domain-tiles?domain=${domain}`));
-    if (!res.ok) return [];
-    const rows = (await res.json()) as { country: string; name?: string; state: unknown }[];
-    return rows.map((r) => ({ iso3: r.country, name: r.name || nameOf(r.country), state: st(r.state) }));
-  }
-
   async function countries(): Promise<CountryDetail[]> {
     // lightweight: derive the feed list from tiles (full detail comes from country())
     const t = await tiles();
@@ -216,5 +207,5 @@ export function makeApiSource(base: string): DataSource {
     }));
   }
 
-  return { tiles, country, countries, domainTiles, incidents, incident };
+  return { tiles, country, countries, incidents, incident };
 }
