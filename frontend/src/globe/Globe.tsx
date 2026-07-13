@@ -462,26 +462,28 @@ export function Globe() {
         }
       }
 
-      // meteorological: rotating storm spirals — live cyclones (real position, category-
-      // scaled, with a near-term forecast track) when available, else the curated
-      // decorative set. Spin follows the hemisphere (cyclonic: CCW north, CW south).
-      if (ov.weather) {
-        const live = storms.current;
-        const list = live.length
-          ? live.map((s) => ({ lon: s.lon, lat: s.lat, spin: s.lat >= 0 ? 1 : -1, size: 1 + s.category * 0.18, track: s.track }))
-          : STORMS.map((s) => ({ lon: s.lon, lat: s.lat, spin: s.spin, size: 1, track: [] as [number, number][] }));
-        list.forEach((s, si) => {
+      // meteorological: active cyclones — live systems (real position, category-scaled,
+      // with a near-term forecast track) when available, else the curated decorative set.
+      // Spin follows the hemisphere (cyclonic: CCW north, CW south). Rendered as baked
+      // volumetric hurricane clouds on the GPU shell (below); the 2D line spiral is the
+      // fallback when the GPU cloud path is unavailable.
+      const fld = field.current;
+      const useGpuClouds = CLOUD_MODE === 'gpu' && cloudGL != null && cloudGL.ready && !cloudGL.lost;
+      const liveStorms = storms.current;
+      const stormList = ov.weather
+        ? (liveStorms.length
+          ? liveStorms.map((s) => ({ lon: s.lon, lat: s.lat, spin: s.lat >= 0 ? 1 : -1, size: 1 + s.category * 0.18, category: s.category, track: s.track }))
+          : STORMS.map((s) => {
+            const m = /Cat\s*(\d)/.exec(s.cat);
+            return { lon: s.lon, lat: s.lat, spin: s.spin, size: 1, category: m ? +m[1] : 2, track: [] as [number, number][] };
+          }))
+        : [];
+
+      // fallback only: the abstract 2D line spiral, drawn when the GPU cloud path is off
+      if (ov.weather && !useGpuClouds) {
+        stormList.forEach((s, si) => {
           const ll: [number, number] = [s.lon, s.lat]; if (!visible(ll)) return;
           const p = projection(ll); if (!p) return;
-          if (s.track.length) {  // near-term forecast track (live storms only)
-            ctx.beginPath(); let started = false;
-            for (const tp of [[s.lon, s.lat] as [number, number], ...s.track]) {
-              if (!visible(tp)) { started = false; continue; }
-              const q = projection(tp); if (!q) { started = false; continue; }
-              if (!started) { ctx.moveTo(q[0], q[1]); started = true; } else ctx.lineTo(q[0], q[1]);
-            }
-            ctx.strokeStyle = 'rgba(196,218,238,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
-          }
           ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate((animate ? time : 0) * 0.7 * s.spin + si);
           ctx.strokeStyle = 'rgba(196,218,238,0.6)'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
           for (let arm = 0; arm < 2; arm++) {
@@ -494,24 +496,27 @@ export function Globe() {
         });
       }
 
-      // meteorological: atmospheric field shell — a VOLUMETRIC cloud layer. The GPU path
-      // (WebGL2) raymarches a thin cloud shell above the surface: coverage (where/how much)
-      // from the interpolated field, volume (the form) from baked worley-perlin 3D noise,
-      // sun-lit and standing over the limb. It degrades to the retained canvas-2D continuous
-      // texture (interpolated field × noise) when WebGL2 is unavailable / context-lost, and
-      // to sprite puffs beneath that. Ambient/decorative; renders nothing without live data.
-      const fld = field.current;
-      if (ov.weather && fld && fld.nlon > 0) {
-        // GPU path: a WebGL2 raymarched volumetric shell, coverage from the field and
-        // volume from baked noise, sun-lit, composited here (labels/storms stay above).
-        // Re-raymarched only on camera/time/field change; the cached bitmap is redrawn
-        // on idle frames. Degrades to the canvas-2D path when unavailable / context-lost.
-        const useGpu = CLOUD_MODE === 'gpu' && cloudGL != null && cloudGL.ready && !cloudGL.lost;
-        if (useGpu) {
-          cloudGL!.setField(fld);
+      // meteorological: atmospheric field shell — a VOLUMETRIC cloud layer that also carries
+      // the storms. The GPU path (WebGL2) raymarches a thin cloud shell above the surface:
+      // coverage (where/how much) from the interpolated field PLUS each cyclone's baked
+      // hurricane stamp, volume (the form) from baked worley-perlin 3D noise, sun-lit and
+      // standing over the limb. It degrades to the retained canvas-2D continuous texture
+      // (interpolated field × noise) when WebGL2 is unavailable / context-lost, and to sprite
+      // puffs beneath that. Ambient/decorative; renders nothing without live field or storms.
+      const hasField = !!(fld && fld.nlon > 0);
+      const wantGpu = useGpuClouds && (hasField || stormList.length > 0);
+      if (ov.weather && (wantGpu || hasField)) {
+        // GPU path: a WebGL2 raymarched volumetric shell — coverage from the field and the
+        // baked hurricane stamps, volume from baked noise, sun-lit, composited here (labels +
+        // forecast tracks stay above). Re-raymarched only on camera/time/field/storm change;
+        // the cached bitmap is redrawn on idle frames. Degrades to canvas-2D when unavailable.
+        if (wantGpu) {
+          cloudGL!.setField(hasField ? fld : null);
+          cloudGL!.setStorms(stormList.map((s) => ({ lon: s.lon, lat: s.lat, category: s.category, spin: s.spin })));
           const [slon, slat] = subSolarPoint(new Date());
           const tBucket = animate ? Math.floor(time * 12) : 0; // ~12 rebuilds/s when animating
-          const key = `${rot.current.lambda.toFixed(2)}:${rot.current.phi.toFixed(2)}:${zoom.current.toFixed(3)}:${tBucket}:${fld.ts ?? ''}`;
+          const stormSig = stormList.map((s) => `${s.lon.toFixed(1)},${s.lat.toFixed(1)},${s.category},${s.spin}`).join('|');
+          const key = `${rot.current.lambda.toFixed(2)}:${rot.current.phi.toFixed(2)}:${zoom.current.toFixed(3)}:${tBucket}:${hasField ? fld!.ts ?? '' : ''}:${stormSig}`;
           if (key !== cloudKey.current) {
             cloudKey.current = key;
             const bmp = cloudGL!.render({
@@ -524,7 +529,7 @@ export function Globe() {
             ctx.imageSmoothingEnabled = true;
             ctx.drawImage(cloudBitmap.current, 0, 0, w, h);
           }
-        } else if (CLOUD_MODE !== 'off' && !CLOUD_CANVAS_SPRITES) {
+        } else if (fld && fld.nlon > 0 && CLOUD_MODE !== 'off' && !CLOUD_CANVAS_SPRITES) {
           const TS = 112;
           const tex = cloudCanvas(TS);
           if (frame - tex.frame >= 3) {            // throttle rebuild (~20fps), cache between
@@ -560,7 +565,7 @@ export function Globe() {
           ctx.globalAlpha = 1;
           ctx.imageSmoothingEnabled = true;
           ctx.drawImage(tex.c, cx - R, cy - R, 2 * R, 2 * R);
-        } else if (CLOUD_MODE !== 'off' && CLOUD_CANVAS_SPRITES) {
+        } else if (fld && fld.nlon > 0 && CLOUD_MODE !== 'off' && CLOUD_CANVAS_SPRITES) {
           // deepest fallback: soft sprite puffs sampled from the packed grid nodes
           const puff = cloudPuff();
           for (let jl = 0; jl < fld.nlat; jl++) for (let il = 0; il < fld.nlon; il++) {
@@ -575,6 +580,23 @@ export function Globe() {
           }
           ctx.globalAlpha = 1;
         }
+      }
+
+      // meteorological: near-term forecast tracks (live storms only), drawn above the cloud
+      // in both the GPU and 2D-fallback paths so they stay legible over the hurricane clouds.
+      if (ov.weather) {
+        ctx.strokeStyle = 'rgba(196,218,238,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+        for (const s of stormList) {
+          if (!s.track.length) continue;
+          ctx.beginPath(); let started = false;
+          for (const tp of [[s.lon, s.lat] as [number, number], ...s.track]) {
+            if (!visible(tp)) { started = false; continue; }
+            const q = projection(tp); if (!q) { started = false; continue; }
+            if (!started) { ctx.moveTo(q[0], q[1]); started = true; } else ctx.lineTo(q[0], q[1]);
+          }
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
       }
 
       // meteorological: numeric value labels for the active mode with size-based

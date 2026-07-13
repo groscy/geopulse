@@ -201,11 +201,15 @@ export function Methodology() {
             <strong> not</strong> rolled into a domain, <strong>not</strong> part of the worst-of composite, and
             <strong> never</strong> opens an incident. The grid is fetched on a slow cadence, cached as one blob, and
             served straight to the globe — a parallel path that never touches the scoring spine, so it can be added or
-            removed without moving a single country's state. The <strong>storm spirals are now live</strong>: a keyless
+            removed without moving a single country's state. The <strong>storms are now live and rendered as baked
+            hurricane clouds</strong>: a keyless
             <a href="https://www.nhc.noaa.gov" target="_blank" rel="noreferrer" style={{ color: 'var(--txt)' }}> NHC</a> feed
-            places each active tropical cyclone at its real position, sized by Saffir-Simpson category and drawn with a
-            near-term track, and each opens a <span className="mono">country:storm</span> incident for the countries it
-            threatens — feature data that drives incidents but, like the field, is never z-scored into the composite.
+            places each active tropical cyclone at its real position, and it is drawn on the same GPU shell as a
+            <strong> volumetric hurricane</strong> — a baked spiral-band-and-eyewall template stamped into cloud coverage,
+            scaled by Saffir-Simpson category, wound with hemisphere-correct chirality, sun-lit and standing over the limb
+            (the abstract 2D spiral remains the no-WebGL2 fallback). Each still carries a near-term track and opens a
+            <span className="mono"> country:storm</span> incident for the countries it threatens — feature data that drives
+            incidents but, like the field, is never z-scored into the composite.
           </p>
         </Section>
 
