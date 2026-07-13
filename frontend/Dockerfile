@@ -1,5 +1,5 @@
 # Multi-stage: build the Vite app, serve the static bundle with nginx.
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
